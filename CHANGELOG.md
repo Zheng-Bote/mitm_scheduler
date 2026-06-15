@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v0.11.0] - 2026-06-15
+
+### Added
+- **Centralized App Info**: Added `AppName`, `AppDescription`, and `AppVersion` centrally in `main.go` and exposed them via the HTTP server.
+- **Dynamic Versioning**: Added support for overriding the application version at compile time via `go build -ldflags "-X main.version=$MITM_SERVER"`.
+- **Startup Logging**: The scheduler now logs its name and version upon successful startup.
+
 ## [v0.10.0] - 2026-06-14
 
 ### Added

@@ -48,7 +48,10 @@ type Server struct {
 	Admins    []config.AdminUser
 	KEK       []byte
 	UploadDir string
-	Scheduler SchedulerInterface
+	Scheduler      SchedulerInterface
+	AppName        string
+	AppDescription string
+	AppVersion     string
 }
 
 // Start runs the HTTP server
@@ -262,13 +265,11 @@ func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Job deleted"))
 }
 
-// handleInfo returns a JSON object with the scheduler name, description,
-// and version. This endpoint is unauthenticated.
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	info := map[string]string{
-		"name":        "Go Scheduler",
-		"description": "A Linux commandline scheduler",
-		"version":     "1.0.0",
+		"name":        s.AppName,
+		"description": s.AppDescription,
+		"version":     s.AppVersion,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(info)

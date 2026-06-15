@@ -35,6 +35,12 @@ import (
 	"golang.org/x/term"
 )
 
+var (
+	appName        = "MitM Scheduler"
+	appDescription = "Backend scheduler for the MitM project"
+	version        = "1.0.0"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: scheduler <path/to/encrypted/config.json>")
@@ -111,12 +117,15 @@ func main() {
 
 	// 6. Start HTTP Server
 	httpServer := &http.Server{
-		Repo:      repo,
-		Port:      schedCfg.HTTPPort,
-		Admins:    dbCfg.Admins,
-		KEK:       []byte(password),
-		UploadDir: dbCfg.UploadDir,
-		Scheduler: sched,
+		Repo:           repo,
+		Port:           schedCfg.HTTPPort,
+		Admins:         dbCfg.Admins,
+		KEK:            []byte(password),
+		UploadDir:      dbCfg.UploadDir,
+		Scheduler:      sched,
+		AppName:        appName,
+		AppDescription: appDescription,
+		AppVersion:     version,
 	}
 	if err := httpServer.Start(); err != nil {
 		repo.LogSystem(ctx, "ERROR", "HTTP", fmt.Sprintf("Failed to start HTTP server: %v", err))
@@ -130,8 +139,9 @@ func main() {
 		repo.LogSystem(ctx, "ERROR", "Scheduler", fmt.Sprintf("Failed to start scheduler: %v", err))
 		log.Fatalf("Failed to start scheduler: %v", err)
 	}
-	repo.LogSystem(ctx, "INFO", "Scheduler", "Scheduler started successfully")
-	log.Println("Scheduler started successfully")
+	successMsg := fmt.Sprintf("%s (%s) started successfully", appName, version)
+	repo.LogSystem(ctx, "INFO", "Scheduler", successMsg)
+	log.Println(successMsg)
 
 	// 8. Wait for termination
 	sigChan := make(chan os.Signal, 1)
