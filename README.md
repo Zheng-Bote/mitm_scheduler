@@ -11,6 +11,7 @@
 [Report Issue](https://github.com/Zheng-Bote/mitm_scheduler/issues) · [Request Feature](https://github.com/Zheng-Bote/mitm_scheduler/pulls)
 </div>
 
+---
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 
 <details>
@@ -36,6 +37,7 @@
 </details>
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+---
 
 ## Features
 
