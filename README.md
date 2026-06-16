@@ -53,6 +53,15 @@
   - `admin_audit_logs`: Audit trail for administrative actions via API.
 - **HTTP API**: Health check (`/health`) and info (`/info`) endpoints.
 
+### Status
+
+![GitHub Created At](https://img.shields.io/github/created-at/Zheng-Bote/mitm_scheduler?logo=GitHub)
+![GitHub Release Date](https://img.shields.io/github/release-date/Zheng-Bote/mitm_scheduler?logo=GitHub)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Zheng-Bote/mitm_scheduler?logo=GitHub)](https://github.com/Zheng-Bote/mitm_scheduler/releases)
+![GitHub repo size](https://img.shields.io/github/repo-size/zheng-bote/mitm_scheduler)
+
+![Status](https://img.shields.io/badge/Status-stable-green)
+
 ## Project Structure
 
 - `cmd/scheduler`: Main application entry point.
