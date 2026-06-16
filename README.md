@@ -13,6 +13,28 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 
+<details>
+<summary>Table of Contents</summary>
+
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Setup & Build](#setup-build)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Build](#2-build)
+  - [3. Database Setup](#3-database-setup)
+  - [4. Configuration](#4-configuration)
+- [Running the Scheduler](#running-the-scheduler)
+- [Administrative Tools](#administrative-tools)
+  - [1. GUI Admin Tool (Fyne)](#1-gui-admin-tool-fyne)
+  - [2. Remote REST API](#2-remote-rest-api)
+    - [Update or Create Jobs:](#update-or-create-jobs)
+    - [Download Database Logs with Date Filtering:](#download-database-logs-with-date-filtering)
+- [Injected Environment Variables](#injected-environment-variables)
+- [IPC & Job Communication](#ipc-job-communication)
+- [Docker](#docker)
+
+</details>
+
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Features
