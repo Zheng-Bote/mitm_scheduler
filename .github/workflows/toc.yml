@@ -23,7 +23,7 @@ on:
       files:
         description: "Comma-separated files or globs"
         required: false
-        default: "./README.md, docs/**/*.md"
+        default: "./README.md"
       collapsed:
         description: "true = collapsed <details>, false = expanded"
         required: false
