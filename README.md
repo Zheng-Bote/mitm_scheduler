@@ -1,6 +1,21 @@
-# Go Scheduler
+<div id="top" align="center">
+<h1>MitM Scheduler</h1>
 
-A Linux command-line scheduler that executes external Go programs based on a PostgreSQL configuration.
+<p>A Linux command-line scheduler that executes external Go programs based on a PostgreSQL configuration.</p>
+
+
+![License](https://img.shields.io/badge/license-Apache_2.0-green)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Zheng-Bote/mitm_scheduler?logo=GitHub)](https://github.com/Zheng-Bote/mitm_scheduler/releases)
+<br/>
+[Report Issue](https://github.com/Zheng-Bote/mitm_scheduler/issues) · [Request Feature](https://github.com/Zheng-Bote/mitm_scheduler/pulls)
+</div>
+
+---
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+---
 
 ## Features
 
