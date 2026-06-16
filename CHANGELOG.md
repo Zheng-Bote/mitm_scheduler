@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v0.12.0] - 2026-06-16
+
+### Added
+- **Transformation Errors API**: Added `GET /admin/transformation/errors` REST endpoint for fetching transformation errors (DLQ) along with the associated topic from the raw ingestion table.
+- **API Documentation**: Fully documented all transformation, configuration, log, and RBAC endpoints in `docs/api/README.md`.
+
 ## [v0.11.0] - 2026-06-15
 
 ### Added

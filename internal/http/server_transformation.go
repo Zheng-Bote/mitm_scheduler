@@ -433,3 +433,30 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 		"created": len(createdRules),
 	})
 }
+
+func (s *Server) handleTransformationErrors(w http.ResponseWriter, r *http.Request) {
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	res, err := s.Repo.GetTransformationErrors(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
+		return
+	}
+
+	s.Repo.LogAdminAction(r.Context(), username, "get_transformation_errors", map[string]interface{}{
+		"count": len(res),
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}

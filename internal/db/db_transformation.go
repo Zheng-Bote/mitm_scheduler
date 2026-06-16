@@ -249,3 +249,37 @@ func (r *Repository) DeleteMappingValidation(ctx context.Context, id string) err
 	_, err := r.Pool.Exec(ctx, "DELETE FROM mapping_validation WHERE id = $1", id)
 	return err
 }
+
+type TransformationError struct {
+	ID             string    `json:"id"`
+	RawIngestionID string    `json:"raw_ingestion_id"`
+	Topic          string    `json:"topic"`
+	FailedField    string    `json:"failed_field"`
+	RuleName       string    `json:"rule_name"`
+	ErrorMessage   string    `json:"error_message"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (r *Repository) GetTransformationErrors(ctx context.Context) ([]TransformationError, error) {
+	query := `
+		SELECT te.id::text, te.raw_ingestion_id::text, ri.topic, te.failed_field, te.rule_name, te.error_message, te.created_at
+		FROM transformation_errors te
+		JOIN raw_ingestion ri ON te.raw_ingestion_id = ri.id
+		ORDER BY te.created_at DESC
+	`
+	rows, err := r.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []TransformationError
+	for rows.Next() {
+		var te TransformationError
+		if err := rows.Scan(&te.ID, &te.RawIngestionID, &te.Topic, &te.FailedField, &te.RuleName, &te.ErrorMessage, &te.CreatedAt); err != nil {
+			return nil, err
+		}
+		res = append(res, te)
+	}
+	return res, nil
+}
