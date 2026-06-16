@@ -18,6 +18,7 @@
 <summary>Table of Contents</summary>
 
 - [Features](#features)
+  - [Status](#status)
 - [Project Structure](#project-structure)
 - [Setup & Build](#setup-build)
   - [1. Prerequisites](#1-prerequisites)
