@@ -125,7 +125,7 @@ def main():
                     help="true/false: wrap TOC in <details> (default: true)")
     args = ap.parse_args()
 
-    patterns = args.files.split(",")
+    patterns = [p for p in args.files.split(",") if p.strip()]
     collapsed = str(args.collapsed).lower() in ("1", "true", "yes")
     paths = expand_patterns(patterns)
 
