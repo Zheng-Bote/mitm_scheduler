@@ -1,6 +1,44 @@
-# Go Scheduler
+<div id="top" align="center">
+<h1>MitM Scheduler</h1>
 
-A Linux command-line scheduler that executes external Go programs based on a PostgreSQL configuration.
+<p>A Linux command-line scheduler that executes external Go programs based on a PostgreSQL configuration.</p>
+
+
+![License](https://img.shields.io/badge/license-Apache_2.0-green)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Zheng-Bote/mitm_scheduler?logo=GitHub)](https://github.com/Zheng-Bote/mitm_scheduler/releases)
+<br/>
+[Report Issue](https://github.com/Zheng-Bote/mitm_scheduler/issues) · [Request Feature](https://github.com/Zheng-Bote/mitm_scheduler/pulls)
+</div>
+
+---
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+
+<details>
+<summary>Table of Contents</summary>
+
+- [Features](#features)
+  - [Status](#status)
+- [Project Structure](#project-structure)
+- [Setup & Build](#setup-build)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Build](#2-build)
+  - [3. Database Setup](#3-database-setup)
+  - [4. Configuration](#4-configuration)
+- [Running the Scheduler](#running-the-scheduler)
+- [Administrative Tools](#administrative-tools)
+  - [1. GUI Admin Tool (Fyne)](#1-gui-admin-tool-fyne)
+  - [2. Remote REST API](#2-remote-rest-api)
+    - [Update or Create Jobs:](#update-or-create-jobs)
+    - [Download Database Logs with Date Filtering:](#download-database-logs-with-date-filtering)
+- [Injected Environment Variables](#injected-environment-variables)
+- [IPC & Job Communication](#ipc-job-communication)
+- [Docker](#docker)
+
+</details>
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+---
 
 ## Features
 
@@ -15,6 +53,15 @@ A Linux command-line scheduler that executes external Go programs based on a Pos
   - `job_audit_logs`: Custom audit messages from jobs.
   - `admin_audit_logs`: Audit trail for administrative actions via API.
 - **HTTP API**: Health check (`/health`) and info (`/info`) endpoints.
+
+### Status
+
+![GitHub Created At](https://img.shields.io/github/created-at/Zheng-Bote/mitm_scheduler?logo=GitHub)
+![GitHub Release Date](https://img.shields.io/github/release-date/Zheng-Bote/mitm_scheduler?logo=GitHub)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Zheng-Bote/mitm_scheduler?logo=GitHub)](https://github.com/Zheng-Bote/mitm_scheduler/releases)
+![GitHub repo size](https://img.shields.io/github/repo-size/zheng-bote/mitm_scheduler)
+
+![Status](https://img.shields.io/badge/Status-stable-green)
 
 ## Project Structure
 
