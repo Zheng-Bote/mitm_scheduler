@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go-scheduler/internal/config"
 	"go-scheduler/internal/db"
@@ -40,6 +41,100 @@ var (
 	appDescription = "Backend scheduler for the MitM project"
 	version        = "1.0.0"
 )
+
+func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.AdminUser, kek []byte) {
+	roles, err := repo.GetRoles(ctx)
+	if err != nil {
+		log.Printf("Failed to get roles for bootstrap: %v", err)
+		return
+	}
+	var adminRoleID int
+	for _, r := range roles {
+		if r.Name == "ADMIN" {
+			adminRoleID = r.ID
+			break
+		}
+	}
+	if adminRoleID == 0 {
+		log.Printf("ADMIN role not found in database for bootstrap")
+		return
+	}
+
+	for _, adminCfg := range admins {
+		users, err := repo.GetUsers(ctx)
+		if err != nil {
+			log.Printf("Failed to get users for bootstrap: %v", err)
+			continue
+		}
+		
+		var user *db.User
+		for _, u := range users {
+			if u.Username == adminCfg.Username {
+				uCopy := u
+				user = &uCopy
+				break
+			}
+		}
+
+		created := false
+		if user == nil {
+			err = repo.CreateUser(ctx, adminCfg.Username, adminCfg.Token)
+			if err != nil {
+				log.Printf("Failed to create admin user %s: %v", adminCfg.Username, err)
+				continue
+			}
+			created = true
+			
+			// Refresh users to get the ID
+			users, _ = repo.GetUsers(ctx)
+			for _, u := range users {
+				if u.Username == adminCfg.Username {
+					uCopy := u
+					user = &uCopy
+					break
+				}
+			}
+			if user == nil {
+				log.Printf("Failed to fetch newly created admin user %s", adminCfg.Username)
+				continue
+			}
+		}
+
+		roleIDs, err := repo.GetUserRoles(ctx, user.ID, kek)
+		if err != nil {
+			// If no roles exist yet, ignore the error and initialize empty
+			roleIDs = []int{}
+		}
+
+		hasAdminRole := false
+		for _, rid := range roleIDs {
+			if rid == adminRoleID {
+				hasAdminRole = true
+				break
+			}
+		}
+
+		roleAssigned := false
+		if !hasAdminRole {
+			roleIDs = append(roleIDs, adminRoleID)
+			err = repo.AssignRoles(ctx, user.ID, roleIDs, kek)
+			if err != nil {
+				log.Printf("Failed to assign ADMIN role to %s: %v", adminCfg.Username, err)
+				continue
+			}
+			roleAssigned = true
+		}
+
+		if created || roleAssigned {
+			details := map[string]interface{}{
+				"user_created":  created,
+				"role_assigned": roleAssigned,
+			}
+			repo.LogAdminAction(ctx, "SYSTEM", fmt.Sprintf("Bootstrap Admin: %s", adminCfg.Username), details)
+			log.Printf("Bootstrapped admin %s (created: %v, role_assigned: %v)", adminCfg.Username, created, roleAssigned)
+		}
+	}
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -76,6 +171,9 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer repo.Pool.Close()
+
+	// Bootstrap admins from config
+	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
 
 	// 4. Load Scheduler Config from DB
 	schedCfg, err := repo.GetSchedulerConfig(ctx)
@@ -150,5 +248,8 @@ func main() {
 
 	repo.LogSystem(ctx, "INFO", "Scheduler", "Shutting down...")
 	log.Println("Shutting down...")
-	sched.Stop()
+	
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+	sched.Stop(shutdownCtx)
 }

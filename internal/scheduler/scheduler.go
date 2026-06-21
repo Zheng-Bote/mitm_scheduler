@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 
 	"github.com/robfig/cron/v3"
 	"go-scheduler/internal/db"
@@ -42,6 +43,8 @@ type Scheduler struct {
 	DBConfigJSON string
 	mu           sync.Mutex
 	running      map[int]bool // Tracks active runs
+	activeCmds   map[int]*exec.Cmd
+	wg           sync.WaitGroup
 }
 
 // New creates a new scheduler instance
@@ -52,6 +55,7 @@ func New(repo *db.Repository, socketPath string, dbConfigJSON string) *Scheduler
 		SocketPath:   socketPath,
 		DBConfigJSON: dbConfigJSON,
 		running:      make(map[int]bool),
+		activeCmds:   make(map[int]*exec.Cmd),
 	}
 }
 
@@ -144,6 +148,11 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 		return
 	}
 
+	s.wg.Add(1)
+	s.mu.Lock()
+	s.activeCmds[runID] = cmd
+	s.mu.Unlock()
+
 	pid := cmd.Process.Pid
 	s.Repo.LogSystem(ctx, "DEBUG", "Scheduler", fmt.Sprintf("Job %s started (RunID %d, PID %d)", p.Name, runID, pid))
 	log.Printf("Started job %s (RunID %d, PID %d)", p.Name, runID, pid)
@@ -152,6 +161,13 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 
 	// 4. Wait for completion
 	go func() {
+		defer s.wg.Done()
+		defer func() {
+			s.mu.Lock()
+			delete(s.activeCmds, runID)
+			s.mu.Unlock()
+		}()
+
 		err := cmd.Wait()
 		exitCode := 0
 		success := true
@@ -192,7 +208,38 @@ func (s *Scheduler) RunImmediateJob(ctx context.Context, command string, args []
 	s.RunProgram(p)
 }
 
-// Stop halts the cron scheduler
-func (s *Scheduler) Stop() {
+// Stop halts the cron scheduler and gracefully shuts down running jobs
+func (s *Scheduler) Stop(ctx context.Context) {
 	s.Cron.Stop()
+
+	s.mu.Lock()
+	for runID, cmd := range s.activeCmds {
+		s.Repo.LogSystem(context.Background(), "INFO", "Scheduler", fmt.Sprintf("Sending SIGTERM to job RunID %d", runID))
+		log.Printf("Sending SIGTERM to job RunID %d", runID)
+		if cmd.Process != nil {
+			_ = cmd.Process.Signal(syscall.SIGTERM)
+		}
+	}
+	s.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		log.Println("All jobs shut down gracefully.")
+	case <-ctx.Done():
+		log.Println("Graceful shutdown timeout exceeded. Killing remaining jobs.")
+		s.mu.Lock()
+		for runID, cmd := range s.activeCmds {
+			log.Printf("Killing job RunID %d", runID)
+			if cmd.Process != nil {
+				_ = cmd.Process.Kill()
+			}
+		}
+		s.mu.Unlock()
+	}
 }
