@@ -460,3 +460,66 @@ func (s *Server) handleTransformationErrors(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
 }
+
+func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request) {
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		res, err := s.Repo.GetTopicDependencies(r.Context())
+		if err != nil {
+			http.Error(w, "Failed to fetch topic dependencies", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var td db.TopicDependency
+		if err := json.NewDecoder(r.Body).Decode(&td); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		if td.Topic == "" {
+			http.Error(w, "Missing Topic", http.StatusBadRequest)
+			return
+		}
+		if td.RequiredSources == nil {
+			td.RequiredSources = []string{}
+		}
+		if err := s.Repo.UpsertTopicDependency(r.Context(), td); err != nil {
+			s.Repo.LogAdminAction(r.Context(), username, "upsert_topic_dependency_fail", err.Error())
+			http.Error(w, fmt.Sprintf("Failed to update topic dependency: %v", err), http.StatusInternalServerError)
+			return
+		}
+		s.Repo.LogAdminAction(r.Context(), username, "upsert_topic_dependency_success", map[string]interface{}{"topic": td.Topic})
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Topic dependency updated"))
+		return
+	}
+	
+	if r.Method == http.MethodDelete {
+		topic := r.URL.Query().Get("topic")
+		if topic == "" {
+			http.Error(w, "Missing Topic", http.StatusBadRequest)
+			return
+		}
+		if err := s.Repo.DeleteTopicDependency(r.Context(), topic); err != nil {
+			s.Repo.LogAdminAction(r.Context(), username, "delete_topic_dependency_fail", err.Error())
+			http.Error(w, fmt.Sprintf("Failed to delete topic dependency: %v", err), http.StatusInternalServerError)
+			return
+		}
+		s.Repo.LogAdminAction(r.Context(), username, "delete_topic_dependency_success", map[string]interface{}{"topic": topic})
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+

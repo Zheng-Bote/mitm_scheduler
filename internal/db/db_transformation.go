@@ -251,20 +251,20 @@ func (r *Repository) DeleteMappingValidation(ctx context.Context, id string) err
 }
 
 type TransformationError struct {
-	ID             string    `json:"id"`
-	RawIngestionID string    `json:"raw_ingestion_id"`
-	Topic          string    `json:"topic"`
-	FailedField    string    `json:"failed_field"`
-	RuleName       string    `json:"rule_name"`
-	ErrorMessage   string    `json:"error_message"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	CorrelationID string    `json:"correlation_id"`
+	Topic         string    `json:"topic"`
+	FailedField   string    `json:"failed_field"`
+	RuleName      string    `json:"rule_name"`
+	ErrorMessage  string    `json:"error_message"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func (r *Repository) GetTransformationErrors(ctx context.Context) ([]TransformationError, error) {
 	query := `
-		SELECT te.id::text, te.raw_ingestion_id::text, ri.topic, te.failed_field, te.rule_name, te.error_message, te.created_at
+		SELECT te.id::text, te.correlation_id::text, ri.topic, te.failed_field, te.rule_name, te.error_message, te.created_at
 		FROM transformation_errors te
-		JOIN raw_ingestion ri ON te.raw_ingestion_id = ri.id
+		JOIN (SELECT DISTINCT correlation_id, topic FROM raw_ingestion WHERE correlation_id IS NOT NULL) ri ON te.correlation_id = ri.correlation_id
 		ORDER BY te.created_at DESC
 	`
 	rows, err := r.Pool.Query(ctx, query)
@@ -276,10 +276,50 @@ func (r *Repository) GetTransformationErrors(ctx context.Context) ([]Transformat
 	var res []TransformationError
 	for rows.Next() {
 		var te TransformationError
-		if err := rows.Scan(&te.ID, &te.RawIngestionID, &te.Topic, &te.FailedField, &te.RuleName, &te.ErrorMessage, &te.CreatedAt); err != nil {
+		if err := rows.Scan(&te.ID, &te.CorrelationID, &te.Topic, &te.FailedField, &te.RuleName, &te.ErrorMessage, &te.CreatedAt); err != nil {
 			return nil, err
 		}
 		res = append(res, te)
 	}
 	return res, nil
 }
+
+type TopicDependency struct {
+	Topic           string   `json:"topic"`
+	RequiredSources []string `json:"required_sources"`
+}
+
+func (r *Repository) GetTopicDependencies(ctx context.Context) ([]TopicDependency, error) {
+	rows, err := r.Pool.Query(ctx, "SELECT topic, required_sources FROM topic_dependencies ORDER BY topic ASC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []TopicDependency
+	for rows.Next() {
+		var td TopicDependency
+		if err := rows.Scan(&td.Topic, &td.RequiredSources); err != nil {
+			return nil, err
+		}
+		res = append(res, td)
+	}
+	return res, nil
+}
+
+func (r *Repository) UpsertTopicDependency(ctx context.Context, t TopicDependency) error {
+	query := `
+		INSERT INTO topic_dependencies (topic, required_sources)
+		VALUES ($1, $2)
+		ON CONFLICT (topic) DO UPDATE SET
+			required_sources = EXCLUDED.required_sources
+	`
+	_, err := r.Pool.Exec(ctx, query, t.Topic, t.RequiredSources)
+	return err
+}
+
+func (r *Repository) DeleteTopicDependency(ctx context.Context, topic string) error {
+	_, err := r.Pool.Exec(ctx, "DELETE FROM topic_dependencies WHERE topic = $1", topic)
+	return err
+}
+

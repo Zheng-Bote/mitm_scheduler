@@ -87,6 +87,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/transformation/validations", s.handleMappingValidations)
 	mux.HandleFunc("/admin/transformation/auto-map", s.handleAutoMap)
 	mux.HandleFunc("/admin/transformation/errors", s.handleTransformationErrors)
+	mux.HandleFunc("/admin/transformation/topic-dependencies", s.handleTopicDependencies)
 	mux.HandleFunc("/admin/action", s.handleAdminAction)
 
 	srv := &http.Server{

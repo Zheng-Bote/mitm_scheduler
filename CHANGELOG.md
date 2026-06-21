@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v0.13.0] - 2026-06-21
+
+### Added
+- **Topic Dependencies API**: Added `GET`, `POST`, and `DELETE` REST endpoints under `/admin/transformation/topic-dependencies` to manage the required source topics for Stateful Aggregation.
+- **Database CRUD**: Extended `db_transformation.go` to support operations on the `topic_dependencies` PostgreSQL table.
+
+### Changed
+- **Transformation Errors (DLQ)**: Updated the `GET /admin/transformation/errors` SQL query and JSON response mapping to use `correlation_id` instead of the deprecated `raw_ingestion_id`, aligning with the N:1 Stateful Aggregation logic.
+
 ## [v0.12.0] - 2026-06-16
 
 ### Added
