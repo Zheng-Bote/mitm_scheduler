@@ -260,14 +260,22 @@ type TransformationError struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-func (r *Repository) GetTransformationErrors(ctx context.Context) ([]TransformationError, error) {
+func (r *Repository) GetTransformationErrors(ctx context.Context, limit int) ([]TransformationError, error) {
 	query := `
-		SELECT te.id::text, te.correlation_id::text, ri.topic, te.failed_field, te.rule_name, te.error_message, te.created_at
+		SELECT 
+			te.id::text, 
+			COALESCE(ri.correlation_id::text, ''), 
+			COALESCE(ri.topic, ''), 
+			te.failed_field, 
+			te.rule_name, 
+			te.error_message, 
+			te.created_at
 		FROM transformation_errors te
-		JOIN (SELECT DISTINCT correlation_id, topic FROM raw_ingestion WHERE correlation_id IS NOT NULL) ri ON te.correlation_id = ri.correlation_id
+		LEFT JOIN raw_ingestion ri ON te.raw_ingestion_id = ri.id
 		ORDER BY te.created_at DESC
+		LIMIT $1
 	`
-	rows, err := r.Pool.Query(ctx, query)
+	rows, err := r.Pool.Query(ctx, query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +283,14 @@ func (r *Repository) GetTransformationErrors(ctx context.Context) ([]Transformat
 
 	var res []TransformationError
 	for rows.Next() {
-		var te TransformationError
-		if err := rows.Scan(&te.ID, &te.CorrelationID, &te.Topic, &te.FailedField, &te.RuleName, &te.ErrorMessage, &te.CreatedAt); err != nil {
+		var e TransformationError
+		if err := rows.Scan(&e.ID, &e.CorrelationID, &e.Topic, &e.FailedField, &e.RuleName, &e.ErrorMessage, &e.CreatedAt); err != nil {
 			return nil, err
 		}
-		res = append(res, te)
+		res = append(res, e)
+	}
+	if res == nil {
+		res = []TransformationError{}
 	}
 	return res, nil
 }

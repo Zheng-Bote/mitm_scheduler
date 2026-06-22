@@ -447,7 +447,7 @@ func (s *Server) handleTransformationErrors(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	res, err := s.Repo.GetTransformationErrors(r.Context())
+	res, err := s.Repo.GetTransformationErrors(r.Context(), 500)
 	if err != nil {
 		http.Error(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
 		return

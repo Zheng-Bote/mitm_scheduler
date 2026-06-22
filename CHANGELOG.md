@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v0.13.1] - 2026-06-22
+
+### Fixed
+- **Transformation Errors (DLQ)**: Fixed a SQL error in `GetTransformationErrors` causing an `Internal Server Error` (HTTP 500). The query now correctly joins the `raw_ingestion` table via `raw_ingestion_id` to retrieve the `correlation_id` and `topic`, and properly uses a limit.
+
 ## [v0.13.0] - 2026-06-21
 
 ### Added
