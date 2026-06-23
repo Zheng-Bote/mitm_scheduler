@@ -57,6 +57,13 @@ type Server struct {
 // Start runs the HTTP server
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			s.handleInfo(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})
 	mux.HandleFunc("/info", s.handleInfo)
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/admin/update-jobs", s.handleUpdateJobs)

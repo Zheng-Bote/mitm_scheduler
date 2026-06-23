@@ -1,37 +1,37 @@
-# Build Stage
-FROM golang:1.25-bullseye AS builder
+# Use a lightweight Debian image for maximum compatibility with Go binaries (glibc)
+FROM debian:bookworm-slim
 
+# docker build -t mitm-aggregator:latest -f scheduler/mitm_scheduler/Dockerfile .
+# docker run -d --name mitm-app \
+#       -e SCHEDULER_PASSWORD="DeinPasswort123!" \
+#       -e MASTER_KEY="<DeinBase64MasterKey>" \
+#       -p 8080:8080 \
+#       mitm-aggregator:latest
+
+
+# Install CA certificates (required for SaaS adapters and HTTPS calls)
+RUN apt-get update && \
+    apt-get install -y apt-utils ca-certificates tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
-RUN go mod download
+# Copy all pre-compiled Go binaries from the local ./bin directory into the container
+COPY ./bin/ /app/bin/
 
-# Copy source code
-COPY . .
+# Ensure all binaries are executable
+RUN chmod +x /app/bin/*
 
-# Build binaries
-RUN go build -o scheduler ./cmd/scheduler && \
-    go build -o encrypt-config ./cmd/encrypt-config && \
-    go build -o job1 ./cmd/job1 && \
-    go build -o job2 ./cmd/job2
+# Add the /app/bin directory to the PATH so the scheduler can seamlessly spawn the collectors,
+# transformer, and delivery binaries without needing absolute paths.
+ENV PATH="/app/bin:${PATH}"
 
-# Final Stage
-FROM ubuntu:latest
-
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy binaries from builder
-COPY --from=builder /app/scheduler .
-COPY --from=builder /app/encrypt-config .
-COPY --from=builder /app/job1 .
-COPY --from=builder /app/job2 .
-COPY --from=builder /app/migrations ./migrations
-
-# Expose HTTP port (default is 8080)
 EXPOSE 8080
+# The primary process for this container is the MitM Scheduler (mitm-server).
+# It will spawn the other binaries in the background via os.Exec when jobs trigger.
+ENTRYPOINT ["mitm-server"]
 
-# The scheduler expects the path to the encrypted config as an argument
-# CMD ["./scheduler", "/app/config.json.enc"]
+# Default command argument (points to the pre-encrypted config file copied into /app/bin/)
+# Example: docker run -d -e SCHEDULER_PASSWORD=... my-mitm-image
+CMD ["/app/bin/config.enc"]
