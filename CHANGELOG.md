@@ -5,6 +5,15 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.14.0] - 2026-06-24
+
+### Changed
+- **Component Updates**: Updated bundled `mitm_delivery` to v0.7.0 and `mitm_transformation` to v0.8.0.
+- **Envelope Encryption Rollout**: The bundled Transformation and Delivery engines now fully utilize end-to-end Envelope Encryption (AES-GCM) for processing sensitive PII targets, securely isolating Key Encryption Keys (KEK) and Data Encryption Keys (DEK).
+
+### Fixed
+- **DLQ mapping fix**
+- **updated DLQ querry**
 
 ## [v0.13.1] - 2026-06-22
 

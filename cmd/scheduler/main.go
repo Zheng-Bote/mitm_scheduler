@@ -204,19 +204,30 @@ func main() {
 	}
 	log.Printf("HTTP Server listening on port %d (pre-DB connect)", schedCfg.HTTPPort)
 
-	// 5. DB Connect Delay
+	// 5. Initial DB Connect Delay
 	if dbCfg.DBConnectDelay > 0 {
-		log.Printf("Delaying DB connection by %d seconds...", dbCfg.DBConnectDelay)
+		log.Printf("Delaying initial DB connection by %d seconds...", dbCfg.DBConnectDelay)
 		time.Sleep(time.Duration(dbCfg.DBConnectDelay) * time.Second)
 	}
 
-	// 6. Connect to DB
+	// 6. Connect to DB with retries
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	repo, err := db.NewRepository(ctx, dbCfg.GetDSN())
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	var repo *db.Repository
+	for {
+		repo, err = db.NewRepository(ctx, dbCfg.GetDSN())
+		if err == nil {
+			log.Println("Successfully connected to database.")
+			break
+		}
+		
+		delay := dbCfg.DBConnectDelay
+		if delay <= 0 {
+			delay = 10 // Fallback
+		}
+		log.Printf("Failed to connect to database: %v. Retrying in %d seconds...", err, delay)
+		time.Sleep(time.Duration(delay) * time.Second)
 	}
 	defer repo.Pool.Close()
 
