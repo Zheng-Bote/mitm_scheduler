@@ -95,6 +95,10 @@ func (r *Repository) GetSchedulerConfig(ctx context.Context) (*SchedulerConfig, 
 
 // LogSystem records a system-wide log entry
 func (r *Repository) LogSystem(ctx context.Context, level, component, message string) {
+	if r.Pool == nil {
+		fmt.Printf("[DB-LOG-SKIPPED] %s: [%s] %s: %s\n", time.Now().Format(time.RFC3339), level, component, message)
+		return
+	}
 	_, err := r.Pool.Exec(ctx, "INSERT INTO system_logs (level, component, message) VALUES ($1, $2, $3)", level, component, message)
 	if err != nil {
 		fmt.Printf("[DB-LOG-ERROR] Failed to write to system_logs: %v (Original Msg: [%s] %s: %s)\n", err, level, component, message)
@@ -103,6 +107,10 @@ func (r *Repository) LogSystem(ctx context.Context, level, component, message st
 
 // CreateAuditLog records a job audit entry
 func (r *Repository) CreateAuditLog(ctx context.Context, runID int, component, message string) error {
+	if r.Pool == nil {
+		fmt.Printf("[DB-AUDIT-SKIPPED] RunID: %d, Component: %s, Message: %s\n", runID, component, message)
+		return nil
+	}
 	_, err := r.Pool.Exec(ctx, "INSERT INTO job_audit_logs (run_id, component, message) VALUES ($1, $2, $3)", runID, component, message)
 	if err != nil {
 		fmt.Printf("[DB-AUDIT-ERROR] Failed to write to job_audit_logs: %v\n", err)
@@ -113,6 +121,10 @@ func (r *Repository) CreateAuditLog(ctx context.Context, runID int, component, m
 // LogAdminAction records an administrative action
 func (r *Repository) LogAdminAction(ctx context.Context, username, action string, details interface{}) {
 	detailsJSON, _ := json.Marshal(details)
+	if r.Pool == nil {
+		fmt.Printf("[DB-ADMIN-LOG-SKIPPED] User: %s, Action: %s, Details: %s\n", username, action, string(detailsJSON))
+		return
+	}
 	_, err := r.Pool.Exec(ctx, "INSERT INTO admin_audit_logs (username, action, details) VALUES ($1, $2, $3)", username, action, detailsJSON)
 	if err != nil {
 		fmt.Printf("[DB-ADMIN-LOG-ERROR] %v\n", err)

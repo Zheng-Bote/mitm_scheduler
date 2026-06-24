@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -135,9 +136,24 @@ func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.A
 }
 
 func main() {
+	var configPath string
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: scheduler <path/to/encrypted/config.json>")
-		os.Exit(1)
+		execPath, err := os.Executable()
+		if err == nil {
+			execDir := filepath.Dir(execPath)
+			if _, err := os.Stat(filepath.Join(execDir, "config.json")); err == nil {
+				configPath = filepath.Join(execDir, "config.json")
+			} else if _, err := os.Stat(filepath.Join(execDir, "config.enc")); err == nil {
+				configPath = filepath.Join(execDir, "config.enc")
+			}
+		}
+		if configPath == "" {
+			fmt.Println("Usage: scheduler <path/to/encrypted/config.json>")
+			fmt.Println("Alternatively, place config.json or config.enc in the same directory as the executable.")
+			os.Exit(1)
+		}
+	} else {
+		configPath = os.Args[1]
 	}
 
 	if os.Getenv("MASTER_KEY") == "" {
@@ -145,7 +161,6 @@ func main() {
 		os.Setenv("MASTER_KEY", "6mkdHpNHfF5bdCMj/+MeYAM4wVMy3nJ9FRxpSibhumE=")
 	}
 
-	configPath := os.Args[1]
 
 	// 1. Get Password
 	password := os.Getenv("SCHEDULER_PASSWORD")
@@ -160,36 +175,67 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 3. Connect to DB
+	// 3. Prepare early startup configuration
+	var schedCfg *db.SchedulerConfig = &db.SchedulerConfig{
+		SocketPath: "/tmp/mitm_debug.sock",
+		HTTPPort:   8080,
+	}
+
+	dbConfigBytes, err := json.Marshal(dbCfg)
+	if err != nil {
+		log.Fatalf("Failed to marshal DB config: %v", err)
+	}
+	sched := scheduler.New(nil, schedCfg.SocketPath, string(dbConfigBytes))
+
+	// 4. Start HTTP Server Early
+	httpServer := &http.Server{
+		Repo:           nil, // DB not connected yet
+		Port:           schedCfg.HTTPPort,
+		Admins:         dbCfg.Admins,
+		KEK:            []byte(password),
+		UploadDir:      dbCfg.UploadDir,
+		Scheduler:      sched,
+		AppName:        appName,
+		AppDescription: appDescription,
+		AppVersion:     version,
+	}
+	if err := httpServer.Start(); err != nil {
+		log.Fatalf("Failed to start HTTP server: %v", err)
+	}
+	log.Printf("HTTP Server listening on port %d (pre-DB connect)", schedCfg.HTTPPort)
+
+	// 5. DB Connect Delay
+	if dbCfg.DBConnectDelay > 0 {
+		log.Printf("Delaying DB connection by %d seconds...", dbCfg.DBConnectDelay)
+		time.Sleep(time.Duration(dbCfg.DBConnectDelay) * time.Second)
+	}
+
+	// 6. Connect to DB
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	repo, err := db.NewRepository(ctx, dbCfg.GetDSN())
-	var schedCfg *db.SchedulerConfig
 	if err != nil {
-		log.Printf("DEBUG: Failed to connect to database: %v. Continuing without DB...", err)
-		// Provide dummy repo to avoid immediate panics
-		repo = &db.Repository{}
-		
-		log.Println("DEBUG: Using mock Scheduler Config")
-		schedCfg = &db.SchedulerConfig{
-			SocketPath: "/tmp/mitm_debug.sock",
-			HTTPPort:   8080,
-		}
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer repo.Pool.Close()
+
+	// Supply the connected repository to the running servers
+	httpServer.Repo = repo
+	sched.Repo = repo
+
+	// Bootstrap admins from config
+	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
+
+	// Load Scheduler Config from DB
+	dbSchedCfg, err := repo.GetSchedulerConfig(ctx)
+	if err == nil {
+		schedCfg = dbSchedCfg
 	} else {
-		defer repo.Pool.Close()
-
-		// Bootstrap admins from config
-		bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
-
-		// 4. Load Scheduler Config from DB
-		schedCfg, err = repo.GetSchedulerConfig(ctx)
-		if err != nil {
-			log.Fatalf("Failed to load scheduler config from DB: %v", err)
-		}
+		log.Printf("Failed to load scheduler config from DB: %v", err)
 	}
 
-	// 5. Start IPC Server
+	// 7. Start IPC Server
 	ipcServer := &ipc.Server{
 		SocketPath: schedCfg.SocketPath,
 		OnEvent: func(event ipc.StatusEvent) {
@@ -215,32 +261,9 @@ func main() {
 	repo.LogSystem(ctx, "INFO", "IPC", fmt.Sprintf("IPC Server listening on %s", schedCfg.SocketPath))
 	log.Printf("IPC Server listening on %s", schedCfg.SocketPath)
 
-	dbConfigBytes, err := json.Marshal(dbCfg)
-	if err != nil {
-		log.Fatalf("Failed to marshal DB config: %v", err)
-	}
-	sched := scheduler.New(repo, schedCfg.SocketPath, string(dbConfigBytes))
-
-	// 6. Start HTTP Server
-	httpServer := &http.Server{
-		Repo:           repo,
-		Port:           schedCfg.HTTPPort,
-		Admins:         dbCfg.Admins,
-		KEK:            []byte(password),
-		UploadDir:      dbCfg.UploadDir,
-		Scheduler:      sched,
-		AppName:        appName,
-		AppDescription: appDescription,
-		AppVersion:     version,
-	}
-	if err := httpServer.Start(); err != nil {
-		repo.LogSystem(ctx, "ERROR", "HTTP", fmt.Sprintf("Failed to start HTTP server: %v", err))
-		log.Fatalf("Failed to start HTTP server: %v", err)
-	}
-	repo.LogSystem(ctx, "INFO", "HTTP", fmt.Sprintf("HTTP Server listening on port %d", schedCfg.HTTPPort))
-	log.Printf("HTTP Server listening on port %d", schedCfg.HTTPPort)
-
-	// 7. Start Scheduler
+	// Update scheduler's socket path if it changed from the DB config
+	sched.SocketPath = schedCfg.SocketPath
+	// 8. Start Scheduler
 	if err := sched.Start(ctx); err != nil {
 		repo.LogSystem(ctx, "ERROR", "Scheduler", fmt.Sprintf("Failed to start scheduler: %v", err))
 		log.Fatalf("Failed to start scheduler: %v", err)

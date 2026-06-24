@@ -291,6 +291,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
+	if s.Repo == nil || s.Repo.Pool == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintf(w, "DB Connecting...")
+		return
+	}
+
 	if err := s.Repo.Pool.Ping(ctx); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "DB Error: %v", err)

@@ -45,6 +45,7 @@ type DBConfig struct {
 	LogLevel  string      `json:"log_level"`
 	UploadDir string      `json:"upload_dir"`
 	Admins    []AdminUser `json:"admins"`
+	DBConnectDelay int   `json:"db_connect_delay,omitempty"`
 }
 
 // LoadEncryptedConfig reads an encrypted JSON file and decrypts it into DBConfig
