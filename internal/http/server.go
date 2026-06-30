@@ -41,13 +41,15 @@ type SchedulerInterface interface {
 	RunImmediateJob(ctx context.Context, command string, args []byte)
 }
 
-// Server handles health, info, and admin HTTP requests
 type Server struct {
-	Repo      *db.Repository
-	Port      int
-	Admins    []config.AdminUser
-	KEK       []byte
-	UploadDir string
+	Repo           *db.Repository
+	Port           int
+	UseHTTPS       bool
+	SSLCert        string
+	SSLKey         string
+	Admins         []config.AdminUser
+	KEK            []byte
+	UploadDir      string
 	Scheduler      SchedulerInterface
 	AppName        string
 	AppDescription string
@@ -103,7 +105,17 @@ func (s *Server) Start() error {
 	}
 
 	go func() {
-		_ = srv.ListenAndServe()
+		if s.UseHTTPS {
+			if s.SSLCert == "" {
+				s.SSLCert = "server.crt"
+			}
+			if s.SSLKey == "" {
+				s.SSLKey = "server.key"
+			}
+			_ = srv.ListenAndServeTLS(s.SSLCert, s.SSLKey)
+		} else {
+			_ = srv.ListenAndServe()
+		}
 	}()
 
 	return nil

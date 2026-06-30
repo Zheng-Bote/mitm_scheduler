@@ -180,6 +180,9 @@ func main() {
 		SocketPath: "/tmp/mitm_debug.sock",
 		HTTPPort:   8080,
 	}
+	if dbCfg.HTTPPort != 0 {
+		schedCfg.HTTPPort = dbCfg.HTTPPort
+	}
 
 	dbConfigBytes, err := json.Marshal(dbCfg)
 	if err != nil {
@@ -191,6 +194,9 @@ func main() {
 	httpServer := &http.Server{
 		Repo:           nil, // DB not connected yet
 		Port:           schedCfg.HTTPPort,
+		UseHTTPS:       dbCfg.UseHTTPS,
+		SSLCert:        dbCfg.SSLCert,
+		SSLKey:         dbCfg.SSLKey,
 		Admins:         dbCfg.Admins,
 		KEK:            []byte(password),
 		UploadDir:      dbCfg.UploadDir,
@@ -202,12 +208,16 @@ func main() {
 	if err := httpServer.Start(); err != nil {
 		log.Fatalf("Failed to start HTTP server: %v", err)
 	}
-	log.Printf("HTTP Server listening on port %d (pre-DB connect)", schedCfg.HTTPPort)
+	protocol := "HTTP"
+	if dbCfg.UseHTTPS {
+		protocol = "HTTPS"
+	}
+	log.Printf("%s Server listening on port %d (pre-DB connect)", protocol, schedCfg.HTTPPort)
 
 	// 5. Initial DB Connect Delay
-	if dbCfg.DBConnectDelay > 0 {
-		log.Printf("Delaying initial DB connection by %d seconds...", dbCfg.DBConnectDelay)
-		time.Sleep(time.Duration(dbCfg.DBConnectDelay) * time.Second)
+	if dbCfg.DB.DBConnectDelay > 0 {
+		log.Printf("Delaying initial DB connection by %d seconds...", dbCfg.DB.DBConnectDelay)
+		time.Sleep(time.Duration(dbCfg.DB.DBConnectDelay) * time.Second)
 	}
 
 	// 6. Connect to DB with retries
@@ -222,7 +232,7 @@ func main() {
 			break
 		}
 		
-		delay := dbCfg.DBConnectDelay
+		delay := dbCfg.DB.DBConnectDelay
 		if delay <= 0 {
 			delay = 10 // Fallback
 		}

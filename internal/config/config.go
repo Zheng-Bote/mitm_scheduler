@@ -35,17 +35,24 @@ type AdminUser struct {
 	Token    string `json:"token"` // This will be used for the HELO auth
 }
 
-// DBConfig holds the PostgreSQL connection parameters
+type DBConnectionConfig struct {
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	User           string `json:"user"`
+	Password       string `json:"password"`
+	Database       string `json:"database"`
+	DBConnectDelay int    `json:"db_connect_delay,omitempty"`
+}
+
 type DBConfig struct {
-	Host     string      `json:"host"`
-	Port     int         `json:"port"`
-	User     string      `json:"user"`
-	Password string      `json:"password"`
-	Database  string      `json:"database"`
-	LogLevel  string      `json:"log_level"`
-	UploadDir string      `json:"upload_dir"`
-	Admins    []AdminUser `json:"admins"`
-	DBConnectDelay int   `json:"db_connect_delay,omitempty"`
+	DB             DBConnectionConfig `json:"db"`
+	LogLevel       string             `json:"log_level"`
+	UploadDir      string             `json:"upload_dir"`
+	Admins         []AdminUser        `json:"admins"`
+	HTTPPort       int                `json:"http_port,omitempty"`
+	UseHTTPS       bool               `json:"use_https,omitempty"`
+	SSLCert        string             `json:"ssl_cert,omitempty"`
+	SSLKey         string             `json:"ssl_key,omitempty"`
 }
 
 // LoadEncryptedConfig reads an encrypted JSON file and decrypts it into DBConfig
@@ -71,5 +78,5 @@ func LoadEncryptedConfig(filePath string, password string) (*DBConfig, error) {
 // GetDSN returns the PostgreSQL connection string
 func (c *DBConfig) GetDSN() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		c.User, c.Password, c.Host, c.Port, c.Database)
+		c.DB.User, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.Database)
 }

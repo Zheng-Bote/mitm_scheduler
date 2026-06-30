@@ -1,9 +1,16 @@
 {
-  "host": "localhost",
-  "port": 5432,
-  "user": "scheduler_user",
-  "password": "your_secure_password",
-  "database": "scheduler_db",
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "user": "scheduler_user",
+    "password": "your_secure_password",
+    "database": "scheduler_db",
+    "db_connect_delay": 10
+  },
+  "http_port": 8080,
+  "use_https": false,
+  "ssl_cert": "server.crt",
+  "ssl_key": "server.key",
   "log_level": "DEBUG",
   "upload_dir": "/tmp/mitm_uploads",
   "admins": [
