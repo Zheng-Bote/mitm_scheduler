@@ -5,6 +5,16 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.15.0] - 2026-06-30
+
+### Added
+- **HTTPS/TLS Support**: Added support for dual HTTP and HTTPS bindings. The scheduler can now automatically generate SAN-based self-signed certificates for local HTTPS if configured, or use provided certificates.
+
+### Changed
+- **Config Restructuring**: Refactored `config.json` to nest database connection parameters inside a `db` object (e.g. `db_connect_delay`, `host`, `port`, `user`, `password`, `database`).
+- **Database Connection**: Updated all layers (Collector, Transformation, Delivery, Maintenance) to read and parse the new nested JSON configuration provided via `MITM_DB_CONFIG_JSON` with fallback to direct environment variables. All connection initializations are now properly audited.
+- **Migrations Consolidation**: Consolidated individual `.sql` migration files into a single `setup.sql` script for simpler database initialization. Removed redundant migration folders.
+
 ## [v0.14.0] - 2026-06-24
 
 ### Changed

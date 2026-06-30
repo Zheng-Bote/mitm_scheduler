@@ -110,11 +110,18 @@ Create a `config.json` (see `example_config.json` for a template):
 
 ```json
 {
-  "host": "your-db-host",
-  "port": 5432,
-  "user": "your-user",
-  "password": "your-password",
-  "database": "your-dbname",
+  "db": {
+    "host": "your-db-host",
+    "port": 5432,
+    "user": "your-user",
+    "password": "your-password",
+    "database": "your-dbname",
+    "db_connect_delay": 30
+  },
+  "http_port": 8080,
+  "use_https": false,
+  "ssl_cert": "server.crt",
+  "ssl_key": "server.key",
   "log_level": "DEBUG",
   "upload_dir": "/tmp/mitm_uploads",
   "admins": [
@@ -203,7 +210,7 @@ When the scheduler starts a job, it securely passes configuration and context vi
 
 - `RUN_ID`: The unique ID of the current job execution.
 - `SCHEDULER_SOCKET_PATH`: The path to the Unix domain socket for IPC communication.
-- `MITM_DB_CONFIG_JSON`: The complete, raw database configuration JSON string.
+- `MITM_DB_CONFIG_JSON`: The complete, raw database configuration JSON string containing the nested `"db"` structure.
 - `MITM_DB_HOST`: Target MitM database hostname.
 - `MITM_DB_PORT`: Target MitM database port.
 - `MITM_DB_USER`: Target MitM database username.
