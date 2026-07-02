@@ -116,7 +116,8 @@ Create a `config.json` (see `example_config.json` for a template):
     "user": "your-user",
     "password": "your-password",
     "database": "your-dbname",
-    "db_connect_delay": 30
+    "db_connect_delay": 30,
+    "sslmode": false
   },
   "http_port": 8080,
   "use_https": false,

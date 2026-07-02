@@ -42,6 +42,7 @@ type DBConnectionConfig struct {
 	Password       string `json:"password"`
 	Database       string `json:"database"`
 	DBConnectDelay int    `json:"db_connect_delay,omitempty"`
+	SSLMode        bool   `json:"sslmode,omitempty"`
 }
 
 type DBConfig struct {
@@ -77,6 +78,10 @@ func LoadEncryptedConfig(filePath string, password string) (*DBConfig, error) {
 
 // GetDSN returns the PostgreSQL connection string
 func (c *DBConfig) GetDSN() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		c.DB.User, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.Database)
+	sslMode := "disable"
+	if c.DB.SSLMode {
+		sslMode = "require"
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		c.DB.User, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.Database, sslMode)
 }
