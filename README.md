@@ -217,6 +217,7 @@ When the scheduler starts a job, it securely passes configuration and context vi
 - `MITM_DB_USER`: Target MitM database username.
 - `MITM_DB_PASSWORD`: Target MitM database password.
 - `MITM_DB_NAME`: Target MitM database name.
+- `MITM_DB_SSLMODE`: Derived from the `sslmode` attribute in `config.json` (`true` or `false`). Instructs child processes whether to enforce SSL connections.
 
 These variables allow data collectors to connect to the central MitM database or communicate with the scheduler without relying on CLI arguments or local configuration files.
 

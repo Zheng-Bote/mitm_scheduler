@@ -2,7 +2,7 @@
 
 openssl req -x509 -newkey rsa:2048 -nodes -keyout ./bin/server.key -out ./bin/server.crt -days 3650 \
       -subj "/CN=localhost" \
-      -addext "subjectAltName = DNS:coritydf-coritydatafeed-app-int-4dwj.scp.eu-central-1.aws.cloud.cnx"
+      -addext "subjectAltName = DNS:coritydf-coritydatafeed-app-int-3cvi.scp.eu-central-1.aws.cloud.bmw"
 
 MITM_VERSION=$(git describe --tags)
 

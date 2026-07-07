@@ -121,19 +121,23 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	)
 
 	var dbCfg struct {
-		Host     string `json:"host"`
-		Port     int    `json:"port"`
-		User     string `json:"user"`
-		Password string `json:"password"`
-		Database string `json:"database"`
+		DB struct {
+			Host     string `json:"host"`
+			Port     int    `json:"port"`
+			User     string `json:"user"`
+			Password string `json:"password"`
+			Database string `json:"database"`
+			SSLMode  bool   `json:"sslmode"`
+		} `json:"db"`
 	}
 	if err := json.Unmarshal([]byte(s.DBConfigJSON), &dbCfg); err == nil {
 		cmd.Env = append(cmd.Env,
-			fmt.Sprintf("MITM_DB_HOST=%s", dbCfg.Host),
-			fmt.Sprintf("MITM_DB_PORT=%d", dbCfg.Port),
-			fmt.Sprintf("MITM_DB_USER=%s", dbCfg.User),
-			fmt.Sprintf("MITM_DB_PASSWORD=%s", dbCfg.Password),
-			fmt.Sprintf("MITM_DB_NAME=%s", dbCfg.Database),
+			fmt.Sprintf("MITM_DB_HOST=%s", dbCfg.DB.Host),
+			fmt.Sprintf("MITM_DB_PORT=%d", dbCfg.DB.Port),
+			fmt.Sprintf("MITM_DB_USER=%s", dbCfg.DB.User),
+			fmt.Sprintf("MITM_DB_PASSWORD=%s", dbCfg.DB.Password),
+			fmt.Sprintf("MITM_DB_NAME=%s", dbCfg.DB.Database),
+			fmt.Sprintf("MITM_DB_SSLMODE=%t", dbCfg.DB.SSLMode),
 		)
 	}
 
