@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.19.0] - 2026-07-08
+
+### Fixed
+- **HTTP Server Startup**: Fixed a critical bug causing nil pointer dereferences in the HTTP server by strictly delaying the server start until the database connection logic (including `db_connect_delay` and retries) has successfully completed.
+- **Runtime Nil Checks**: Added safeguard checks (guard clauses) to API endpoints in `server.go` to return an HTTP 503 instead of panicking if the database connection object is nil.
+
 ## [v0.18.0] - 2026-07-08
 
 ### Added

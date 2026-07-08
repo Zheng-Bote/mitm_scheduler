@@ -209,6 +209,11 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.Repo == nil {
+		http.Error(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
+		return
+	}
+
 	ctx := context.Background()
 	for _, job := range jobs {
 		if err := s.Repo.UpsertScheduledProgram(ctx, job); err != nil {
@@ -241,6 +246,11 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.Repo == nil {
+		http.Error(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
 		return
 	}
 

@@ -190,29 +190,6 @@ func main() {
 	}
 	sched := scheduler.New(nil, schedCfg.SocketPath, string(dbConfigBytes))
 
-	// 4. Start HTTP Server Early
-	httpServer := &http.Server{
-		Repo:           nil, // DB not connected yet
-		Port:           schedCfg.HTTPPort,
-		UseHTTPS:       dbCfg.UseHTTPS,
-		SSLCert:        dbCfg.SSLCert,
-		SSLKey:         dbCfg.SSLKey,
-		Admins:         dbCfg.Admins,
-		KEK:            []byte(password),
-		UploadDir:      dbCfg.UploadDir,
-		Scheduler:      sched,
-		AppName:        appName,
-		AppDescription: appDescription,
-		AppVersion:     version,
-	}
-	if err := httpServer.Start(); err != nil {
-		log.Fatalf("Failed to start HTTP server: %v", err)
-	}
-	protocol := "HTTP"
-	if dbCfg.UseHTTPS {
-		protocol = "HTTPS"
-	}
-	log.Printf("%s Server listening on port %d (pre-DB connect)", protocol, schedCfg.HTTPPort)
 
 	// 5. Initial DB Connect Delay
 	if dbCfg.DB.DBConnectDelay > 0 {
@@ -241,9 +218,32 @@ func main() {
 	}
 	defer repo.Pool.Close()
 
-	// Supply the connected repository to the running servers
-	httpServer.Repo = repo
 	sched.Repo = repo
+
+	// 4. Start HTTP Server (now with connected DB)
+	httpServer := &http.Server{
+		Repo:           repo,
+		Port:           schedCfg.HTTPPort,
+		UseHTTPS:       dbCfg.UseHTTPS,
+		SSLCert:        dbCfg.SSLCert,
+		SSLKey:         dbCfg.SSLKey,
+		Admins:         dbCfg.Admins,
+		KEK:            []byte(password),
+		UploadDir:      dbCfg.UploadDir,
+		Scheduler:      sched,
+		AppName:        appName,
+		AppDescription: appDescription,
+		AppVersion:     version,
+	}
+	if err := httpServer.Start(); err != nil {
+		log.Fatalf("Failed to start HTTP server: %v", err)
+	}
+	protocol := "HTTP"
+	if dbCfg.UseHTTPS {
+		protocol = "HTTPS"
+	}
+	log.Printf("%s Server listening on port %d", protocol, schedCfg.HTTPPort)
+
 
 	// Bootstrap admins from config
 	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
