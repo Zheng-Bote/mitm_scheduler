@@ -265,7 +265,7 @@ func (r *Repository) GetTransformationErrors(ctx context.Context, limit int) ([]
 		SELECT 
 			te.id::text, 
 			te.correlation_id::text, 
-			'' AS topic, 
+			''::text AS topic, 
 			te.failed_field, 
 			te.rule_name, 
 			te.error_message, 

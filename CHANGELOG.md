@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scheduler Next Run**: Extended the `/admin/jobs` API response to automatically compute and attach the `next_run` timestamp for enabled scheduled programs using `github.com/robfig/cron/v3`.
 
 ### Fixed
-- **Transformation Errors Schema Updates**: Fixed the `GetTransformationErrors` SQL query to align with the latest database schema. Dropped the outdated join on `raw_ingestion` and now fetches `correlation_id` directly from the `transformation_errors` table, resolving HTTP 500 errors.
+- **Transformation Errors Schema Updates**: Fixed the `GetTransformationErrors` SQL query to align with the latest database schema. Dropped the outdated join on `raw_ingestion` and now fetches `correlation_id` directly from the `transformation_errors` table. Additionally, fixed an untyped literal issue (`''::text AS topic`) that caused the PostgreSQL driver (`pgx`) to fail during `rows.Scan`, resolving HTTP 500 errors on the `/admin/transformation/errors` endpoint.
 
 ## [v0.17.0] - 2026-07-07
 
