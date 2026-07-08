@@ -5,6 +5,15 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.18.0] - 2026-07-08
+
+### Added
+- **Server Time API**: Added a new unauthenticated `/time` JSON endpoint to expose the server's local time and timezone for frontend synchronization.
+- **Scheduler Next Run**: Extended the `/admin/jobs` API response to automatically compute and attach the `next_run` timestamp for enabled scheduled programs using `github.com/robfig/cron/v3`.
+
+### Fixed
+- **Transformation Errors Schema Updates**: Fixed the `GetTransformationErrors` SQL query to align with the latest database schema. Dropped the outdated join on `raw_ingestion` and now fetches `correlation_id` directly from the `transformation_errors` table, resolving HTTP 500 errors.
+
 ## [v0.17.0] - 2026-07-07
 
 ### Added

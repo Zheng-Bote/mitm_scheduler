@@ -264,14 +264,13 @@ func (r *Repository) GetTransformationErrors(ctx context.Context, limit int) ([]
 	query := `
 		SELECT 
 			te.id::text, 
-			COALESCE(ri.correlation_id::text, ''), 
-			COALESCE(ri.topic, ''), 
+			te.correlation_id::text, 
+			'' AS topic, 
 			te.failed_field, 
 			te.rule_name, 
 			te.error_message, 
 			te.created_at
 		FROM transformation_errors te
-		LEFT JOIN raw_ingestion ri ON te.raw_ingestion_id = ri.id
 		ORDER BY te.created_at DESC
 		LIMIT $1
 	`

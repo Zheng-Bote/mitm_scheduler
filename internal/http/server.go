@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron/v3"
+
 	"go-scheduler/internal/config"
 	"go-scheduler/internal/crypto"
 	"go-scheduler/internal/db"
@@ -68,6 +70,7 @@ func (s *Server) Start() error {
 	})
 	mux.HandleFunc("/info", s.handleInfo)
 	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/time", s.handleTime)
 	mux.HandleFunc("/admin/update-jobs", s.handleUpdateJobs)
 	mux.HandleFunc("/admin/jobs", s.handleGetJobs)
 	mux.HandleFunc("/admin/delete-job", s.handleDeleteJob)
@@ -248,8 +251,27 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Repo.LogAdminAction(context.Background(), username, "get_jobs", nil)
+	
+	type JobResponse struct {
+		db.ScheduledProgram
+		NextRun string `json:"next_run"`
+	}
+	var res []JobResponse
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	now := time.Now()
+	for _, j := range jobs {
+		nextRun := ""
+		if j.Enabled {
+			schedule, err := parser.Parse(j.CronExpr)
+			if err == nil {
+				nextRun = schedule.Next(now).Format(time.RFC3339)
+			}
+		}
+		res = append(res, JobResponse{ScheduledProgram: j, NextRun: nextRun})
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(jobs)
+	json.NewEncoder(w).Encode(res)
 }
 
 // handleDeleteJob deletes a scheduled program by name (query param "name").
@@ -294,6 +316,19 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(info)
+}
+
+// handleTime returns the server's local time as JSON.
+// This endpoint is unauthenticated.
+func (s *Server) handleTime(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+	res := map[string]interface{}{
+		"local_time": now.Format(time.RFC3339),
+		"timestamp":  now.Unix(),
+		"timezone":   now.Location().String(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 }
 
 // handleHealth performs a database ping and returns HTTP 200 if the
