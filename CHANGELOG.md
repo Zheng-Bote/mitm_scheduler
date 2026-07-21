@@ -5,6 +5,11 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.20.0] - 2026-07-21
+
+### Fixed
+- **HTTPS Server Startup Logging**: Enhanced the HTTP server to properly log startup errors when `UseHTTPS` is true (e.g. if the SSL certificate or key cannot be found on the filesystem), instead of silently failing and swallowing the `ListenAndServeTLS` error.
+
 ## [v0.19.0] - 2026-07-08
 
 ### Fixed

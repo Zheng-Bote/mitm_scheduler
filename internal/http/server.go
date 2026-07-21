@@ -115,9 +115,13 @@ func (s *Server) Start() error {
 			if s.SSLKey == "" {
 				s.SSLKey = "server.key"
 			}
-			_ = srv.ListenAndServeTLS(s.SSLCert, s.SSLKey)
+			if err := srv.ListenAndServeTLS(s.SSLCert, s.SSLKey); err != nil && err != http.ErrServerClosed {
+				fmt.Printf("ERROR: Failed to start HTTPS server (cert: %s, key: %s): %v\n", s.SSLCert, s.SSLKey, err)
+			}
 		} else {
-			_ = srv.ListenAndServe()
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Printf("ERROR: Failed to start HTTP server: %v\n", err)
+			}
 		}
 	}()
 
