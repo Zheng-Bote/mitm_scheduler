@@ -31,6 +31,7 @@
   - [2. Remote REST API](#2-remote-rest-api)
     - [Update or Create Jobs:](#update-or-create-jobs)
     - [Download Database Logs with Date Filtering:](#download-database-logs-with-date-filtering)
+    - [Download Logs as FlatBuffers Binary:](#download-logs-as-flatbuffers-binary)
 - [Injected Environment Variables](#injected-environment-variables)
 - [IPC & Job Communication](#ipc-job-communication)
 - [Docker](#docker)
