@@ -26,6 +26,7 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | :--- | :--- | :--- | :--- | :--- |
 | `/admin/upload/source_file` | `POST` | Upload a data source file | Request Body: multipart/form-data | Admin (HTTP Basic Auth) |
 | `/admin/dlq` | `GET` | Get Dead Letter Queue entries | None | Public (Unauthenticated) |
+| `/admin/dlq_bin` | `GET` | Get Dead Letter Queue entries as FlatBuffers binary | None | Public (Unauthenticated) |
 
 ### Configuration (Credentials & Delivery Targets)
 | URL | Method | Description | Options / Parameters | Authentication / Role |
@@ -37,8 +38,11 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | URL | Method | Description | Options / Parameters | Authentication / Role |
 | :--- | :--- | :--- | :--- | :--- |
 | `/admin/logs/system`| `GET` | Download system logs as a JSON file | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
+| `/admin/logs/system_bin`| `GET` | Download system logs as a FlatBuffers binary file | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
 | `/admin/logs/job-audit`| `GET` | Download job audit logs as a JSON file | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
+| `/admin/logs/job-audit_bin`| `GET` | Download job audit logs as a FlatBuffers binary file | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
 | `/admin/logs/admin-audit`| `GET`| Download administrative audit logs as JSON | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
+| `/admin/logs/admin-audit_bin`| `GET`| Download administrative audit logs as FlatBuffers binary | `from`, `to` (Query parameters, optional) | Admin (HTTP Basic Auth) |
 | `/admin/action` | `POST` | Explicitly log an administrative action | Request Body: JSON | Admin (HTTP Basic Auth) |
 
 ### Role-Based Access Control (RBAC)
@@ -62,6 +66,7 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | `/admin/transformation/validations` | `GET`, `POST`, `DELETE`| Manage data mapping validations | Request Body: JSON, or `id` (Query parameter) | Admin (HTTP Basic Auth) |
 | `/admin/transformation/auto-map` | `POST` | Auto-map source to target | Request Body: JSON | Admin (HTTP Basic Auth) |
 | `/admin/transformation/errors` | `GET` | Get transformation errors (DLQ) with topic | None | Admin (HTTP Basic Auth) |
+| `/admin/transformation/errors_bin` | `GET` | Get transformation errors as FlatBuffers binary | None | Admin (HTTP Basic Auth) |
 
 ---
 
@@ -133,3 +138,9 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 *   **Method**: `GET`
 *   **Parameters** (Optional): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date)
 *   **Response**: Returns an `application/json` stream with a `Content-Disposition` attachment header.
+
+### 2.7 FlatBuffers Binary API Endpoints
+*   **Paths**: `/admin/dlq_bin`, `/admin/logs/system_bin`, `/admin/logs/job-audit_bin`, `/admin/logs/admin-audit_bin`, `/admin/transformation/errors_bin`
+*   **Method**: `GET`
+*   **Parameters** (for log download endpoints): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date, optional)
+*   **Response**: Returns an `application/octet-stream` binary stream encoded using Google FlatBuffers schemas (defined in `scheduler/mitm_scheduler/schematas/`). For log download endpoints (`/admin/logs/*_bin`), a `Content-Disposition` attachment header is also included (e.g. `filename=system_logs.bin`).

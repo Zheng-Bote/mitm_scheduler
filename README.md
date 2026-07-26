@@ -46,7 +46,7 @@
 - **Encrypted Config**: Database credentials and admin tokens are stored in an encrypted JSON file (AES-256-GCM + Argon2id).
 - **Dynamic Reloading**: Jobs can be updated via the API and reloaded without restarting the service.
 - **IPC over Unix Sockets**: Jobs report status events back to the scheduler via JSON-Lines.
-- **Admin API**: Remote job management with authentication, including automatic `next_run` cron calculations.
+- **Admin API**: Remote job management with authentication, including automatic `next_run` cron calculations and high-performance FlatBuffers binary endpoints (`/admin/*_bin`).
 - **Enhanced Logging**:
   - `system_logs`: Core scheduler lifecycle events.
   - `job_status_events`: Real-time job progress tracking.
@@ -69,6 +69,7 @@
 - `cmd/encrypt-config`: Utility to encrypt a JSON configuration file.
 - `cmd/job1`, `cmd/job2`: Example jobs demonstrating IPC and Audit features.
 - `internal/`: Core logic (crypto, db, ipc, http, scheduler).
+- `schematas/`: FlatBuffers schemas (`*.fbs`) and generated Go bindings for high-performance binary APIs.
 - `migrations/`: SQL files for database setup.
 
 ## Setup & Build
@@ -203,6 +204,15 @@ This request will:
 curl -u "admin1:your_secure_token" -X GET \
      "http://localhost:8080/admin/logs/system?from=2026-06-01&to=2026-06-02" \
      -o system_logs.json
+```
+
+#### Download Logs as FlatBuffers Binary:
+
+```bash
+# Download system logs as FlatBuffers binary
+curl -u "admin1:your_secure_token" -X GET \
+     "http://localhost:8080/admin/logs/system_bin?from=2026-06-01&to=2026-06-02" \
+     -o system_logs.bin
 ```
 
 ## Injected Environment Variables

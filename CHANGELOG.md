@@ -5,6 +5,13 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.21.0] - 2026-07-26
+
+### Added
+- **FlatBuffers Binary API Endpoints**: Implemented new high-performance FlatBuffers binary endpoints (`/admin/dlq_bin`, `/admin/logs/system_bin`, `/admin/logs/job-audit_bin`, `/admin/logs/admin-audit_bin`, and `/admin/transformation/errors_bin`).
+- **FlatBuffers Schemas**: Added comprehensive FlatBuffers schemas (`dlq.fbs`, `system_logs.fbs`, `job_audit_logs.fbs`, `admin_audit_logs.fbs`, and `transformation_errors.fbs`) in `schematas/` with dual timestamp representations (RFC3339 string and Unix epoch milliseconds) and generated Go bindings.
+- **Documentation**: Updated API documentation and README to cover the new FlatBuffers binary endpoints.
+
 ## [v0.20.0] - 2026-07-21
 
 ### Fixed

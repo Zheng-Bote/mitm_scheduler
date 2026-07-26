@@ -76,11 +76,15 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/delete-job", s.handleDeleteJob)
 	mux.HandleFunc("/admin/upload/source_file", s.handleUploadFile)
 	mux.HandleFunc("/admin/logs/system", s.handleDownloadSystemLogs)
+	mux.HandleFunc("/admin/logs/system_bin", s.handleDownloadSystemLogsBin)
 	mux.HandleFunc("/admin/logs/job-audit", s.handleDownloadJobAuditLogs)
+	mux.HandleFunc("/admin/logs/job-audit_bin", s.handleDownloadJobAuditLogsBin)
 	mux.HandleFunc("/admin/logs/admin-audit", s.handleDownloadAdminAuditLogs)
+	mux.HandleFunc("/admin/logs/admin-audit_bin", s.handleDownloadAdminAuditLogsBin)
 	mux.HandleFunc("/admin/credentials", s.handleCredentials)
 	mux.HandleFunc("/admin/delivery_targets", s.handleDeliveryTargets)
 	mux.HandleFunc("/admin/dlq", s.handleDLQ)
+	mux.HandleFunc("/admin/dlq_bin", s.handleDLQBin)
 
 	// RBAC routes
 	mux.HandleFunc("/admin/rbac/roles", s.handleGetRoles)
@@ -99,6 +103,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/transformation/validations", s.handleMappingValidations)
 	mux.HandleFunc("/admin/transformation/auto-map", s.handleAutoMap)
 	mux.HandleFunc("/admin/transformation/errors", s.handleTransformationErrors)
+	mux.HandleFunc("/admin/transformation/errors_bin", s.handleTransformationErrorsBin)
 	mux.HandleFunc("/admin/transformation/topic-dependencies", s.handleTopicDependencies)
 	mux.HandleFunc("/admin/action", s.handleAdminAction)
 
