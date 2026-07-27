@@ -30,6 +30,7 @@
   - [1. GUI Admin Tool (Fyne)](#1-gui-admin-tool-fyne)
   - [2. Remote REST API](#2-remote-rest-api)
     - [Update or Create Jobs:](#update-or-create-jobs)
+    - [Stop a Running Job (Requires ADMIN Role):](#stop-a-running-job-requires-admin-role)
     - [Download Database Logs with Date Filtering:](#download-database-logs-with-date-filtering)
     - [Download Logs as FlatBuffers Binary:](#download-logs-as-flatbuffers-binary)
 - [Injected Environment Variables](#injected-environment-variables)
