@@ -1,6 +1,10 @@
 #!/bin/sh
 
-openssl req -x509 -newkey rsa:2048 -nodes -keyout ./bin/server.key -out ./bin/server.crt -days 3650 \
+openssl req -x509 -newkey rsa:4096 -nodes -keyout ./data/server_prd.key -out ./data/server_prd.crt -days 3650 \
+      -subj "/CN=localhost" \
+      -addext "subjectAltName = DNS:coritydf-coritydatafeed-app-prod-3cvd.scp.eu-central-1.aws.cloud.bmw"
+
+openssl req -x509 -newkey rsa:4096 -nodes -keyout ./data/server_int.key -out ./data/server_int.crt -days 3650 \
       -subj "/CN=localhost" \
       -addext "subjectAltName = DNS:coritydf-coritydatafeed-app-int-3cvi.scp.eu-central-1.aws.cloud.bmw"
 

@@ -47,7 +47,7 @@
 - **Encrypted Config**: Database credentials and admin tokens are stored in an encrypted JSON file (AES-256-GCM + Argon2id).
 - **Dynamic Reloading**: Jobs can be updated via the API and reloaded without restarting the service.
 - **IPC over Unix Sockets**: Jobs report status events back to the scheduler via JSON-Lines.
-- **Admin API**: Remote job management with authentication, including automatic `next_run` cron calculations and high-performance FlatBuffers binary endpoints (`/admin/*_bin`).
+- **Admin API**: Remote job management with authentication and RBAC, including automatic `next_run` cron calculations, active job termination (`/admin/stop-job` for `ADMIN` role), and high-performance FlatBuffers binary endpoints (`/admin/*_bin`).
 - **Enhanced Logging**:
   - `system_logs`: Core scheduler lifecycle events.
   - `job_status_events`: Real-time job progress tracking.
@@ -197,6 +197,13 @@ This request will:
 2. Upsert the job into the database (by name).
 3. Trigger a scheduler reload.
 4. Log the action in `admin_audit_logs`.
+
+#### Stop a Running Job (Requires ADMIN Role):
+
+```bash
+curl -u "admin1:your_secure_token" -X POST \
+     "http://localhost:8080/admin/stop-job?name=RemoteJob"
+```
 
 #### Download Database Logs with Date Filtering:
 

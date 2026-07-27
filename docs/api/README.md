@@ -17,9 +17,10 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 ### Job Management
 | URL | Method | Description | Options / Parameters | Authentication / Role |
 | :--- | :--- | :--- | :--- | :--- |
-| `/admin/jobs` | `GET` | List all scheduled job configurations | None | Admin (HTTP Basic Auth) |
+| `/admin/jobs` | `GET` | List all scheduled job configs (includes `next_run`, `is_running`, and `active_pid`) | None | Admin (HTTP Basic Auth) |
 | `/admin/update-jobs`| `POST` | Create or update one or more job configurations | Request Body: JSON array of job configs | Admin (HTTP Basic Auth) |
 | `/admin/delete-job` | `DELETE`| Remove a job configuration and reload scheduler | `name` (Query parameter) | Admin (HTTP Basic Auth) |
+| `/admin/stop-job` | `POST`, `DELETE` | Send termination signal (SIGTERM/SIGKILL) to stop an active job | `name` (Query parameter) | Admin (HTTP Basic Auth + RBAC `ADMIN` role) |
 
 ### Uploads & DLQ
 | URL | Method | Description | Options / Parameters | Authentication / Role |
@@ -104,7 +105,10 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
         "args": [],
         "cron_expr": "*/5 * * * *",
         "enabled": true,
-        "restart_on_exit": false
+        "restart_on_exit": false,
+        "next_run": "2026-07-27T14:05:00+02:00",
+        "is_running": true,
+        "active_pid": 12345
       }
     ]
     ```
@@ -133,13 +137,21 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 *   **Parameters**: `name` (Query parameter) - exact unique name of the program configuration.
 *   **Response**: `200 OK` (Body: `Job deleted`)
 
-### 2.6 Download Logs
+### 2.6 Stop Job
+*   **Path**: `/admin/stop-job`
+*   **Method**: `POST`, `DELETE`
+*   **Parameters**: `name` (Query parameter) - exact unique name of the currently running program configuration.
+*   **Authentication / Role**: Requires valid HTTP Basic Auth credentials and the user must have the `ADMIN` role (via config or database RBAC).
+*   **Response**: `200 OK` (Body: `Stop signal sent to job`) or `403 Forbidden` if user lacks `ADMIN` role.
+
+
+### 2.7 Download Logs
 *   **Paths**: `/admin/logs/system`, `/admin/logs/job-audit`, `/admin/logs/admin-audit`
 *   **Method**: `GET`
 *   **Parameters** (Optional): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date)
 *   **Response**: Returns an `application/json` stream with a `Content-Disposition` attachment header.
 
-### 2.7 FlatBuffers Binary API Endpoints
+### 2.8 FlatBuffers Binary API Endpoints
 *   **Paths**: `/admin/dlq_bin`, `/admin/logs/system_bin`, `/admin/logs/job-audit_bin`, `/admin/logs/admin-audit_bin`, `/admin/transformation/errors_bin`
 *   **Method**: `GET`
 *   **Parameters** (for log download endpoints): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date, optional)

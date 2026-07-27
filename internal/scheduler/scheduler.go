@@ -30,10 +30,21 @@ import (
 	"os/exec"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/robfig/cron/v3"
 	"go-scheduler/internal/db"
 )
+
+// ActiveRun tracks an executing job instance in memory
+type ActiveRun struct {
+	RunID     int
+	ProgramID int
+	Name      string
+	PID       int
+	Cmd       *exec.Cmd
+	Cancelled bool
+}
 
 // Scheduler manages the lifecycle of jobs
 type Scheduler struct {
@@ -44,6 +55,7 @@ type Scheduler struct {
 	mu           sync.Mutex
 	running      map[int]bool // Tracks active runs
 	activeCmds   map[int]*exec.Cmd
+	activeRuns   map[int]*ActiveRun
 	wg           sync.WaitGroup
 }
 
@@ -56,6 +68,7 @@ func New(repo *db.Repository, socketPath string, dbConfigJSON string) *Scheduler
 		DBConfigJSON: dbConfigJSON,
 		running:      make(map[int]bool),
 		activeCmds:   make(map[int]*exec.Cmd),
+		activeRuns:   make(map[int]*ActiveRun),
 	}
 }
 
@@ -152,9 +165,17 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 		return
 	}
 
+	run := &ActiveRun{
+		RunID:     runID,
+		ProgramID: p.ID,
+		Name:      p.Name,
+		PID:       cmd.Process.Pid,
+		Cmd:       cmd,
+	}
 	s.wg.Add(1)
 	s.mu.Lock()
 	s.activeCmds[runID] = cmd
+	s.activeRuns[runID] = run
 	s.mu.Unlock()
 
 	pid := cmd.Process.Pid
@@ -169,6 +190,7 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 		defer func() {
 			s.mu.Lock()
 			delete(s.activeCmds, runID)
+			delete(s.activeRuns, runID)
 			s.mu.Unlock()
 		}()
 
@@ -191,8 +213,15 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 			log.Printf("Failed to update final status for RunID %d: %v", runID, err)
 		}
 
-		// Restart if configured
-		if p.RestartOnExit && !success {
+		s.mu.Lock()
+		cancelled := false
+		if r, ok := s.activeRuns[runID]; ok {
+			cancelled = r.Cancelled
+		}
+		s.mu.Unlock()
+
+		// Restart if configured and not explicitly cancelled
+		if p.RestartOnExit && !success && !cancelled {
 			s.Repo.LogSystem(ctx, "INFO", "Scheduler", fmt.Sprintf("Restarting job %s due to failure", p.Name))
 			log.Printf("Restarting job %s due to failure...", p.Name)
 			s.RunProgram(p)
@@ -246,4 +275,54 @@ func (s *Scheduler) Stop(ctx context.Context) {
 		}
 		s.mu.Unlock()
 	}
+}
+
+// GetActivePIDs returns a map of currently running job names to their process IDs
+func (s *Scheduler) GetActivePIDs() map[string]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	res := make(map[string]int)
+	for _, run := range s.activeRuns {
+		res[run.Name] = run.PID
+	}
+	return res
+}
+
+// StopJobByName sends a termination signal to an active job identified by its name
+func (s *Scheduler) StopJobByName(name string) error {
+	s.mu.Lock()
+	var targetRun *ActiveRun
+	for _, run := range s.activeRuns {
+		if run.Name == name {
+			targetRun = run
+			break
+		}
+	}
+	if targetRun == nil {
+		s.mu.Unlock()
+		return fmt.Errorf("job %q is not currently running", name)
+	}
+	targetRun.Cancelled = true
+	cmd := targetRun.Cmd
+	runID := targetRun.RunID
+	s.mu.Unlock()
+
+	s.Repo.LogSystem(context.Background(), "INFO", "Scheduler", fmt.Sprintf("Sending SIGTERM to job %q (RunID %d)", name, runID))
+	log.Printf("Sending SIGTERM to job %q (RunID %d)", name, runID)
+	if cmd.Process != nil {
+		_ = cmd.Process.Signal(syscall.SIGTERM)
+	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		s.mu.Lock()
+		_, stillActive := s.activeRuns[runID]
+		s.mu.Unlock()
+		if stillActive && cmd.Process != nil {
+			log.Printf("Job %q (RunID %d) did not terminate after 5s, sending SIGKILL", name, runID)
+			_ = cmd.Process.Kill()
+		}
+	}()
+
+	return nil
 }

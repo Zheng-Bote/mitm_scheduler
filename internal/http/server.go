@@ -41,6 +41,8 @@ import (
 type SchedulerInterface interface {
 	Reload(ctx context.Context) error
 	RunImmediateJob(ctx context.Context, command string, args []byte)
+	GetActivePIDs() map[string]int
+	StopJobByName(name string) error
 }
 
 type Server struct {
@@ -74,6 +76,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/update-jobs", s.handleUpdateJobs)
 	mux.HandleFunc("/admin/jobs", s.handleGetJobs)
 	mux.HandleFunc("/admin/delete-job", s.handleDeleteJob)
+	mux.HandleFunc("/admin/stop-job", s.handleStopJob)
 	mux.HandleFunc("/admin/upload/source_file", s.handleUploadFile)
 	mux.HandleFunc("/admin/logs/system", s.handleDownloadSystemLogs)
 	mux.HandleFunc("/admin/logs/system_bin", s.handleDownloadSystemLogsBin)
@@ -273,11 +276,14 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	
 	type JobResponse struct {
 		db.ScheduledProgram
-		NextRun string `json:"next_run"`
+		NextRun   string `json:"next_run"`
+		IsRunning bool   `json:"is_running"`
+		ActivePID int    `json:"active_pid,omitempty"`
 	}
 	var res []JobResponse
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 	now := time.Now()
+	activePIDs := s.Scheduler.GetActivePIDs()
 	for _, j := range jobs {
 		nextRun := ""
 		if j.Enabled {
@@ -286,7 +292,18 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 				nextRun = schedule.Next(now).Format(time.RFC3339)
 			}
 		}
-		res = append(res, JobResponse{ScheduledProgram: j, NextRun: nextRun})
+		isRunning := false
+		activePID := 0
+		if pid, ok := activePIDs[j.Name]; ok {
+			isRunning = true
+			activePID = pid
+		}
+		res = append(res, JobResponse{
+			ScheduledProgram: j,
+			NextRun:          nextRun,
+			IsRunning:        isRunning,
+			ActivePID:        activePID,
+		})
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
@@ -325,6 +342,64 @@ func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	s.Repo.LogAdminAction(ctx, username, "delete_job", map[string]string{"name": name})
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Job deleted"))
+}
+
+// handleStopJob stops a currently running scheduled program by name (query param "name").
+// Requires valid HTTP Basic Auth credentials.
+func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Verify user has ADMIN role (either via config or DB RBAC roles)
+	isAdmin := false
+	for _, admin := range s.Admins {
+		if admin.Username == username {
+			isAdmin = true
+			break
+		}
+	}
+	if !isAdmin {
+		roleNames, err := s.Repo.GetUserRolesByUsername(r.Context(), username, s.KEK)
+		if err == nil {
+			for _, role := range roleNames {
+				if role == "ADMIN" {
+					isAdmin = true
+					break
+				}
+			}
+		}
+	}
+	if !isAdmin {
+		s.Repo.LogAdminAction(r.Context(), username, "stop_job_forbidden", map[string]string{"name": r.URL.Query().Get("name")})
+		http.Error(w, "Forbidden: ADMIN role required to stop jobs", http.StatusForbidden)
+		return
+	}
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "Missing job name", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	if err := s.Scheduler.StopJobByName(name); err != nil {
+		s.Repo.LogAdminAction(ctx, username, "stop_job_fail", map[string]string{"name": name, "error": err.Error()})
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.Repo.LogAdminAction(ctx, username, "stop_job", map[string]string{"name": name})
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Stop signal sent to job"))
 }
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {

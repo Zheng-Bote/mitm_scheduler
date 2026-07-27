@@ -5,6 +5,14 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.22.0] - 2026-07-27
+
+### Added
+- **Job Cancellation / Stopping**: Added `StopJobByName(name string)` in the scheduler to cleanly terminate active job processes via `SIGTERM` (with a 5-second `SIGKILL` fallback).
+- **Admin API Job Termination**: Implemented `POST/DELETE /admin/stop-job?name=<job_name>` endpoint to stop running jobs. Restricted execution strictly to users with the `ADMIN` role.
+- **Active State Tracking**: Extended `/admin/jobs` endpoint to report real-time execution status (`is_running` boolean and `active_pid` integer) for scheduled programs.
+- **Audit Logging**: Added `stop_job` and `stop_job_forbidden` audit events to log job termination attempts and RBAC violations.
+
 ## [v0.21.0] - 2026-07-26
 
 ### Added
