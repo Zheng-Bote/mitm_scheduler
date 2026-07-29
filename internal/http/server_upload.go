@@ -29,7 +29,7 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error fetching user roles", http.StatusInternalServerError)
 		return
 	}
-	
+
 	isUploader := false
 	for _, r := range roleNames {
 		if r == "UPLOADER" || r == "ADMIN" {
@@ -37,7 +37,7 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	
+
 	if !isUploader {
 		http.Error(w, "Forbidden: UPLOADER role required", http.StatusForbidden)
 		return
@@ -88,7 +88,7 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to save file content", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Log the audit
 	s.Repo.LogAdminAction(r.Context(), adminUser, "UPLOAD_FILE", map[string]string{"file": header.Filename, "topic": topic})
 

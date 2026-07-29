@@ -32,8 +32,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/robfig/cron/v3"
 	"go-scheduler/internal/db"
+
+	"github.com/robfig/cron/v3"
 )
 
 // ActiveRun tracks an executing job instance in memory

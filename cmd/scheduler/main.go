@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -65,7 +66,7 @@ func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.A
 			log.Printf("Failed to get users for bootstrap: %v", err)
 			continue
 		}
-		
+
 		var user *db.User
 		for _, u := range users {
 			if u.Username == adminCfg.Username {
@@ -83,7 +84,7 @@ func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.A
 				continue
 			}
 			created = true
-			
+
 			// Refresh users to get the ID
 			users, _ = repo.GetUsers(ctx)
 			for _, u := range users {
@@ -136,6 +137,8 @@ func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.A
 }
 
 func main() {
+	version = strings.Split(version, "-")[0]
+
 	var configPath string
 	if len(os.Args) < 2 {
 		execPath, err := os.Executable()
@@ -160,7 +163,6 @@ func main() {
 		log.Println("DEBUG: Using default MASTER_KEY")
 		os.Setenv("MASTER_KEY", "6mkdHpNHfF5bdCMj/+MeYAM4wVMy3nJ9FRxpSibhumE=")
 	}
-
 
 	// 1. Get Password
 	password := os.Getenv("SCHEDULER_PASSWORD")
@@ -190,7 +192,6 @@ func main() {
 	}
 	sched := scheduler.New(nil, schedCfg.SocketPath, string(dbConfigBytes))
 
-
 	// 5. Initial DB Connect Delay
 	if dbCfg.DB.DBConnectDelay > 0 {
 		log.Printf("Delaying initial DB connection by %d seconds...", dbCfg.DB.DBConnectDelay)
@@ -208,7 +209,7 @@ func main() {
 			log.Println("Successfully connected to database.")
 			break
 		}
-		
+
 		delay := dbCfg.DB.DBConnectDelay
 		if delay <= 0 {
 			delay = 10 // Fallback
@@ -243,7 +244,6 @@ func main() {
 		protocol = "HTTPS"
 	}
 	log.Printf("%s Server listening on port %d", protocol, schedCfg.HTTPPort)
-
 
 	// Bootstrap admins from config
 	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
@@ -300,7 +300,7 @@ func main() {
 
 	repo.LogSystem(ctx, "INFO", "Scheduler", "Shutting down...")
 	log.Println("Shutting down...")
-	
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 	sched.Stop(shutdownCtx)

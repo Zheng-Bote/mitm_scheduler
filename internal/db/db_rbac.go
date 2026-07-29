@@ -150,7 +150,3 @@ func (r *Repository) GetUserRolesByUsername(ctx context.Context, username string
 
 	return roleNames, nil
 }
-
-
-
-

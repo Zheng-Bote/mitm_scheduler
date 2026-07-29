@@ -59,7 +59,7 @@ func (r *Repository) GetDeliveryTargets(ctx context.Context) ([]DeliveryTarget, 
 			fmt.Printf("[DB ERROR] GetDeliveryTargets Scan failed: %v\n", err)
 			return nil, err
 		}
-		
+
 		if isActive != nil {
 			t.IsActive = *isActive
 		}
@@ -69,7 +69,7 @@ func (r *Repository) GetDeliveryTargets(ctx context.Context) ([]DeliveryTarget, 
 		if updatedAt != nil {
 			t.UpdatedAt = *updatedAt
 		}
-		
+
 		decrypted, err := crypto.EnvelopeDecrypt(kek, wrappedKey, nonce, payload)
 		if err == nil {
 			t.ConfigPayload = string(decrypted)

@@ -29,8 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go-scheduler/internal/crypto"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ScheduledProgram represents a job configuration from the DB
@@ -392,7 +393,7 @@ func (r *Repository) GetSourceCredentials(ctx context.Context) ([]SourceCredenti
 			fmt.Printf("[DB ERROR] GetSourceCredentials Scan failed: %v\n", err)
 			return nil, err
 		}
-		
+
 		if isActive != nil {
 			c.IsActive = *isActive
 		}
@@ -402,7 +403,7 @@ func (r *Repository) GetSourceCredentials(ctx context.Context) ([]SourceCredenti
 		if updatedAt != nil {
 			c.UpdatedAt = *updatedAt
 		}
-		
+
 		decrypted, err := crypto.EnvelopeDecrypt(kek, wrappedKey, nonce, payload)
 		if err == nil {
 			c.ConfigPayload = string(decrypted)

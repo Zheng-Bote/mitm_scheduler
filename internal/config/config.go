@@ -46,14 +46,14 @@ type DBConnectionConfig struct {
 }
 
 type DBConfig struct {
-	DB             DBConnectionConfig `json:"db"`
-	LogLevel       string             `json:"log_level"`
-	UploadDir      string             `json:"upload_dir"`
-	Admins         []AdminUser        `json:"admins"`
-	HTTPPort       int                `json:"http_port,omitempty"`
-	UseHTTPS       bool               `json:"use_https,omitempty"`
-	SSLCert        string             `json:"ssl_cert,omitempty"`
-	SSLKey         string             `json:"ssl_key,omitempty"`
+	DB        DBConnectionConfig `json:"db"`
+	LogLevel  string             `json:"log_level"`
+	UploadDir string             `json:"upload_dir"`
+	Admins    []AdminUser        `json:"admins"`
+	HTTPPort  int                `json:"http_port,omitempty"`
+	UseHTTPS  bool               `json:"use_https,omitempty"`
+	SSLCert   string             `json:"ssl_cert,omitempty"`
+	SSLKey    string             `json:"ssl_key,omitempty"`
 }
 
 // LoadEncryptedConfig reads an encrypted JSON file and decrypts it into DBConfig

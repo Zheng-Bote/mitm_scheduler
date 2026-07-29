@@ -273,7 +273,7 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Repo.LogAdminAction(context.Background(), username, "get_jobs", nil)
-	
+
 	type JobResponse struct {
 		db.ScheduledProgram
 		NextRun   string `json:"next_run"`
@@ -305,7 +305,7 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 			ActivePID:        activePID,
 		})
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
 }

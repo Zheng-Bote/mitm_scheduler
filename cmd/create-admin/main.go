@@ -44,7 +44,7 @@ func main() {
 
 	// Use our crypto package's Argon2 derive to get the hash
 	hash := crypto.DeriveKey([]byte(*newAdminPass), salt)
-	
+
 	// Format as a simple string to store in DB: base64(salt):base64(hash)
 	hashStr := fmt.Sprintf("%s:%s", base64.StdEncoding.EncodeToString(salt), base64.StdEncoding.EncodeToString(hash))
 
@@ -63,7 +63,7 @@ func main() {
 	// Also assign the ADMIN role
 	// KEK is the password used to decrypt config
 	kek := []byte(*password)
-	
+
 	// Get ADMIN role ID
 	var roleID int
 	err = repo.Pool.QueryRow(ctx, "SELECT id FROM roles WHERE name = 'ADMIN'").Scan(&roleID)

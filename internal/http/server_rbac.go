@@ -170,7 +170,7 @@ func (s *Server) handleGetOsUserRoles(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	username := r.URL.Query().Get("os_user")
 	if username == "" {
 		http.Error(w, "os_user required", http.StatusBadRequest)

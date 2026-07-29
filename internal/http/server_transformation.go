@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/uuid"
 	"go-scheduler/internal/db"
+
+	"github.com/google/uuid"
 )
 
 func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +52,7 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Mapping source updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -67,7 +68,7 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
@@ -112,7 +113,7 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Target field updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -128,7 +129,7 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
@@ -173,7 +174,7 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Rule updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -189,7 +190,7 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
@@ -234,7 +235,7 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 		w.Write([]byte("Transformation updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -250,7 +251,7 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
@@ -295,7 +296,7 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 		w.Write([]byte("Validation updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -311,7 +312,7 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
@@ -397,7 +398,7 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 		for i, tgt := range targets {
 			normTgt := normalizeForMatch(tgt.FieldName)
 			dist := levenshtein(normSf, normTgt)
-			
+
 			// Threshold: up to 3 edits allowed for string matching
 			if dist < bestDist && dist <= 3 {
 				bestDist = dist
@@ -423,9 +424,9 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Repo.LogAdminAction(r.Context(), username, "auto_map", map[string]interface{}{
-		"source_id": req.SourceID,
+		"source_id":       req.SourceID,
 		"fields_provided": len(req.SourceFields),
-		"rules_created": len(createdRules),
+		"rules_created":   len(createdRules),
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -503,7 +504,7 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 		w.Write([]byte("Topic dependency updated"))
 		return
 	}
-	
+
 	if r.Method == http.MethodDelete {
 		topic := r.URL.Query().Get("topic")
 		if topic == "" {
@@ -519,7 +520,6 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
-

@@ -24,10 +24,11 @@ import (
 	"time"
 	"unsafe"
 
+	"go-scheduler/windows/security/credentials/ui"
+
 	"fyne.io/fyne/v2"
 	"github.com/go-ole/go-ole"
 	"github.com/saltosystems/winrt-go/windows/foundation"
-	"go-scheduler/windows/security/credentials/ui"
 )
 
 // waitAsync blocks until the given WinRT IAsyncOperation completes, polling

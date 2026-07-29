@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -264,7 +265,7 @@ func (r *Repository) GetTransformationErrors(ctx context.Context, limit int) ([]
 	query := `
 		SELECT 
 			te.id::text, 
-			te.correlation_id::text, 
+			te.raw_ingestion_id::text, 
 			''::text AS topic, 
 			te.failed_field, 
 			te.rule_name, 
@@ -283,8 +284,31 @@ func (r *Repository) GetTransformationErrors(ctx context.Context, limit int) ([]
 	var res []TransformationError
 	for rows.Next() {
 		var e TransformationError
-		if err := rows.Scan(&e.ID, &e.CorrelationID, &e.Topic, &e.FailedField, &e.RuleName, &e.ErrorMessage, &e.CreatedAt); err != nil {
+		var id, corr, topic, failed, rule, msg sql.NullString
+		var ca sql.NullTime
+		if err := rows.Scan(&id, &corr, &topic, &failed, &rule, &msg, &ca); err != nil {
 			return nil, err
+		}
+		if id.Valid {
+			e.ID = id.String
+		}
+		if corr.Valid {
+			e.CorrelationID = corr.String
+		}
+		if topic.Valid {
+			e.Topic = topic.String
+		}
+		if failed.Valid {
+			e.FailedField = failed.String
+		}
+		if rule.Valid {
+			e.RuleName = rule.String
+		}
+		if msg.Valid {
+			e.ErrorMessage = msg.String
+		}
+		if ca.Valid {
+			e.CreatedAt = ca.Time
 		}
 		res = append(res, e)
 	}
@@ -332,4 +356,3 @@ func (r *Repository) DeleteTopicDependency(ctx context.Context, topic string) er
 	_, err := r.Pool.Exec(ctx, "DELETE FROM topic_dependencies WHERE topic = $1", topic)
 	return err
 }
-
