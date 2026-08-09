@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.24.0] - 2026-08-09
+
+### Added
+- **Backup & Restore API**: Implemented `/admin/backup` and `/admin/restore` endpoints to export and import the complete system configuration (jobs, sources, targets, rules) as JSON.
+- **RBAC**: Introduced the `BACKUP-RESTORE` role to control access to the configuration backup and restore functionality.
+
 ## [v0.23.0] - 2026-07-29
 
 ### Added
