@@ -10,12 +10,15 @@ import (
 func (r *Repository) ExportConfigTable(ctx context.Context, tableName string) ([]json.RawMessage, error) {
 	// Restrict to known config tables to prevent SQL injection
 	validTables := map[string]bool{
-		"scheduler_jobs":       true,
-		"sources":              true,
-		"delivery_targets":     true,
-		"transformation_rules": true,
-		"mapping_rules":        true,
-		"validations":          true,
+		"scheduled_programs":     true,
+		"source_credentials":     true,
+		"delivery_targets":       true,
+		"mapping_transformation": true,
+		"mapping_rule":           true,
+		"mapping_validation":     true,
+		"mapping_source":         true,
+		"mapping_target_field":   true,
+		"topic_dependencies":     true,
 	}
 
 	if !validTables[tableName] {
@@ -43,12 +46,15 @@ func (r *Repository) ExportConfigTable(ctx context.Context, tableName string) ([
 // ImportConfigTable imports a slice of JSON objects into a given table.
 func (r *Repository) ImportConfigTable(ctx context.Context, tableName string, rowsData []json.RawMessage) error {
 	validTables := map[string]bool{
-		"scheduler_jobs":       true,
-		"sources":              true,
-		"delivery_targets":     true,
-		"transformation_rules": true,
-		"mapping_rules":        true,
-		"validations":          true,
+		"scheduled_programs":     true,
+		"source_credentials":     true,
+		"delivery_targets":       true,
+		"mapping_transformation": true,
+		"mapping_rule":           true,
+		"mapping_validation":     true,
+		"mapping_source":         true,
+		"mapping_target_field":   true,
+		"topic_dependencies":     true,
 	}
 
 	if !validTables[tableName] {

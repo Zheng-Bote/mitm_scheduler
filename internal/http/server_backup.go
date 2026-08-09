@@ -28,12 +28,15 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tables := []string{
-		"sources",
+		"scheduled_programs",
+		"source_credentials",
 		"delivery_targets",
-		"scheduler_jobs",
-		"transformation_rules",
-		"mapping_rules",
-		"validations",
+		"mapping_transformation",
+		"mapping_rule",
+		"mapping_validation",
+		"mapping_source",
+		"mapping_target_field",
+		"topic_dependencies",
 	}
 
 	backupData := make(map[string][]json.RawMessage)
@@ -82,12 +85,15 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 
 	// Important: Order of insertion must respect foreign key constraints
 	tables := []string{
-		"sources",
+		"scheduled_programs",
+		"source_credentials",
 		"delivery_targets",
-		"scheduler_jobs",
-		"transformation_rules",
-		"mapping_rules",
-		"validations",
+		"mapping_transformation",
+		"mapping_rule",
+		"mapping_validation",
+		"mapping_source",
+		"mapping_target_field",
+		"topic_dependencies",
 	}
 
 	for _, t := range tables {
