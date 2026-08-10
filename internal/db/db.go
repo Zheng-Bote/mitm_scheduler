@@ -496,3 +496,43 @@ func (r *Repository) GetDLQEntries(ctx context.Context, limit int) ([]DLQEntry, 
 	}
 	return entries, rows.Err()
 }
+
+// RequeueDLQEntries requeues specified DLQ entries by resetting their package status or creating new ones, then deleting them from DLQ.
+func (r *Repository) RequeueDLQEntries(ctx context.Context, dlqIDs []string) error {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	for _, dlqID := range dlqIDs {
+		var pkgID *string
+		var payload string
+		err = tx.QueryRow(ctx, "SELECT package_id::text, payload::text FROM dead_letter_queue WHERE id = $1", dlqID).Scan(&pkgID, &payload)
+		if err != nil {
+			return fmt.Errorf("failed to fetch dlq entry %s: %v", dlqID, err)
+		}
+
+		if pkgID != nil {
+			// Update existing package
+			_, err = tx.Exec(ctx, "UPDATE packages SET status = 'pending', retry_count = 0, next_retry_at = NOW(), error_message = NULL WHERE id = $1", *pkgID)
+			if err != nil {
+				return fmt.Errorf("failed to update package for dlq %s: %v", dlqID, err)
+			}
+		} else {
+			// Insert a new package if original package doesn't exist anymore
+			_, err = tx.Exec(ctx, "INSERT INTO packages (payload, idempotency_key, status) VALUES ($1, gen_random_uuid(), 'pending')", payload)
+			if err != nil {
+				return fmt.Errorf("failed to recreate package for dlq %s: %v", dlqID, err)
+			}
+		}
+
+		// Remove from DLQ
+		_, err = tx.Exec(ctx, "DELETE FROM dead_letter_queue WHERE id = $1", dlqID)
+		if err != nil {
+			return fmt.Errorf("failed to delete dlq entry %s: %v", dlqID, err)
+		}
+	}
+
+	return tx.Commit(ctx)
+}

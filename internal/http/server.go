@@ -37,10 +37,10 @@ import (
 	"go-scheduler/internal/db"
 )
 
-// SchedulerInterface allows the HTTP server to trigger reloads
 type SchedulerInterface interface {
 	Reload(ctx context.Context) error
 	RunImmediateJob(ctx context.Context, command string, args []byte)
+	RunJobByName(ctx context.Context, name string) error
 	GetActivePIDs() map[string]int
 	StopJobByName(name string) error
 }
@@ -77,6 +77,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/jobs", s.handleGetJobs)
 	mux.HandleFunc("/admin/delete-job", s.handleDeleteJob)
 	mux.HandleFunc("/admin/stop-job", s.handleStopJob)
+	mux.HandleFunc("/admin/execute-job", s.handleExecuteJob)
 	mux.HandleFunc("/admin/upload/source_file", s.handleUploadFile)
 	mux.HandleFunc("/admin/logs/system", s.handleDownloadSystemLogs)
 	mux.HandleFunc("/admin/logs/system_bin", s.handleDownloadSystemLogsBin)
@@ -88,6 +89,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/delivery_targets", s.handleDeliveryTargets)
 	mux.HandleFunc("/admin/dlq", s.handleDLQ)
 	mux.HandleFunc("/admin/dlq_bin", s.handleDLQBin)
+	mux.HandleFunc("/admin/dlq/requeue", s.handleDLQRequeue)
 	mux.HandleFunc("/admin/backup", s.handleBackup)
 	mux.HandleFunc("/admin/restore", s.handleRestore)
 
@@ -402,6 +404,43 @@ func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
 	s.Repo.LogAdminAction(ctx, username, "stop_job", map[string]string{"name": name})
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Stop signal sent to job"))
+}
+
+// handleExecuteJob triggers an immediate run of a scheduled program by its name.
+// Requires valid HTTP Basic Auth credentials.
+func (s *Server) handleExecuteJob(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "Missing job name", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	if err := s.Scheduler.RunJobByName(ctx, name); err != nil {
+		s.Repo.LogAdminAction(ctx, username, "execute_job_fail", map[string]string{"name": name, "error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to execute job", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	s.Repo.LogAdminAction(ctx, username, "execute_job", map[string]string{"name": name})
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Job execution started"))
 }
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
@@ -747,4 +786,41 @@ func (s *Server) handleDLQ(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("Failed to encode DLQ entries: %v", err)))
 	}
+}
+
+// handleDLQRequeue handles POST requests to requeue specified DLQ entries
+func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	ids := r.URL.Query()["id"]
+	if len(ids) == 0 {
+		// Also support comma-separated "id" param
+		if idParam := r.URL.Query().Get("id"); idParam != "" {
+			ids = strings.Split(idParam, ",")
+		} else {
+			http.Error(w, "Missing id parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	ctx := r.Context()
+	if err := s.Repo.RequeueDLQEntries(ctx, ids); err != nil {
+		s.Repo.LogAdminAction(ctx, username, "dlq_requeue_fail", map[string]interface{}{"ids": ids, "error": err.Error()})
+		http.Error(w, fmt.Sprintf("Failed to requeue DLQ entries: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	s.Repo.LogAdminAction(ctx, username, "dlq_requeue_success", map[string]interface{}{"ids": ids, "count": len(ids)})
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Successfully requeued %d DLQ entries", len(ids))))
 }

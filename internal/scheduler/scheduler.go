@@ -230,6 +230,21 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	}()
 }
 
+// RunJobByName executes a scheduled program identified by its name immediately
+func (s *Scheduler) RunJobByName(ctx context.Context, name string) error {
+	programs, err := s.Repo.GetAllPrograms(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load programs: %w", err)
+	}
+	for _, p := range programs {
+		if p.Name == name {
+			s.RunProgram(p)
+			return nil
+		}
+	}
+	return fmt.Errorf("job %q not found", name)
+}
+
 // RunImmediateJob executes a job immediately without saving it to the enabled programs list
 func (s *Scheduler) RunImmediateJob(ctx context.Context, command string, args []byte) {
 	p := db.ScheduledProgram{

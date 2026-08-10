@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.25.0] - 2026-08-10
+
+### Added
+- **API**: Implemented `/admin/execute-job?name=<JobName>` endpoint to manually trigger the immediate execution of a scheduled job outside of its regular cron schedule.
+- **API**: Implemented `/admin/dlq/requeue?id=...` endpoint to requeue specified Dead Letter Queue (DLQ) entries back into the delivery packages queue and remove them from the DLQ.
+
 ## [v0.24.0] - 2026-08-09
 
 ### Added

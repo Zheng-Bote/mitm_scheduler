@@ -21,6 +21,7 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | `/admin/update-jobs`| `POST` | Create or update one or more job configurations | Request Body: JSON array of job configs | Admin (HTTP Basic Auth) |
 | `/admin/delete-job` | `DELETE`| Remove a job configuration and reload scheduler | `name` (Query parameter) | Admin (HTTP Basic Auth) |
 | `/admin/stop-job` | `POST`, `DELETE` | Send termination signal (SIGTERM/SIGKILL) to stop an active job | `name` (Query parameter) | Admin (HTTP Basic Auth + RBAC `ADMIN` role) |
+| `/admin/execute-job` | `POST` | Trigger an immediate manual execution of a scheduled job by its name | `name` (Query parameter) | Admin (HTTP Basic Auth) |
 
 ### Uploads & DLQ
 | URL | Method | Description | Options / Parameters | Authentication / Role |
@@ -28,6 +29,7 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | `/admin/upload/source_file` | `POST` | Upload a data source file | Request Body: multipart/form-data | Admin (HTTP Basic Auth) |
 | `/admin/dlq` | `GET` | Get Dead Letter Queue entries | None | Public (Unauthenticated) |
 | `/admin/dlq_bin` | `GET` | Get Dead Letter Queue entries as FlatBuffers binary | None | Public (Unauthenticated) |
+| `/admin/dlq/requeue` | `POST` | Requeue one or more DLQ entries by returning them to the package queue | `id` (Query parameter, multiple or comma-separated) | Admin (HTTP Basic Auth) |
 
 ### Configuration (Credentials & Delivery Targets)
 | URL | Method | Description | Options / Parameters | Authentication / Role |
@@ -144,14 +146,25 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 *   **Authentication / Role**: Requires valid HTTP Basic Auth credentials and the user must have the `ADMIN` role (via config or database RBAC).
 *   **Response**: `200 OK` (Body: `Stop signal sent to job`) or `403 Forbidden` if user lacks `ADMIN` role.
 
+### 2.7 Execute Job
+*   **Path**: `/admin/execute-job`
+*   **Method**: `POST`
+*   **Parameters**: `name` (Query parameter) - exact unique name of the program configuration.
+*   **Response**: `200 OK` (Body: `Job execution started`) or `404 Not Found` if job does not exist.
 
-### 2.7 Download Logs
+### 2.8 Requeue DLQ Entries
+*   **Path**: `/admin/dlq/requeue`
+*   **Method**: `POST`
+*   **Parameters**: `id` (Query parameter) - one or more IDs of DLQ entries (e.g., `?id=123&id=456` or `?id=123,456`).
+*   **Response**: `200 OK` (Body: `Successfully requeued X DLQ entries`) or `500 Internal Server Error`.
+
+### 2.9 Download Logs
 *   **Paths**: `/admin/logs/system`, `/admin/logs/job-audit`, `/admin/logs/admin-audit`
 *   **Method**: `GET`
 *   **Parameters** (Optional): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date)
 *   **Response**: Returns an `application/json` stream with a `Content-Disposition` attachment header.
 
-### 2.8 FlatBuffers Binary API Endpoints
+### 2.10 FlatBuffers Binary API Endpoints
 *   **Paths**: `/admin/dlq_bin`, `/admin/logs/system_bin`, `/admin/logs/job-audit_bin`, `/admin/logs/admin-audit_bin`, `/admin/transformation/errors_bin`
 *   **Method**: `GET`
 *   **Parameters** (for log download endpoints): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date, optional)
