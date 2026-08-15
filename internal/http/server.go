@@ -26,16 +26,71 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 
 	"go-scheduler/internal/config"
 	"go-scheduler/internal/crypto"
 	"go-scheduler/internal/db"
 )
+
+type requestIDKey struct{}
+
+func Recover(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("panic recovered: %v\n%s", err, debug.Stack())
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func LimitBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var limit int64 = 1 << 20 // 1 MB default for API JSON
+		if strings.HasPrefix(r.URL.Path, "/admin/upload/") {
+			limit = 100 << 20 // 100 MB for CSV/XLSX uploads
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func WithRequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := r.Header.Get("X-Request-ID")
+		if id == "" {
+			id = uuid.NewString()
+		}
+		ctx := context.WithValue(r.Context(), requestIDKey{}, id)
+		w.Header().Set("X-Request-ID", id)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func Throttle(max int) func(http.Handler) http.Handler {
+	sem := make(chan struct{}, max)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+				next.ServeHTTP(w, r)
+			default:
+				http.Error(w, "server busy", http.StatusServiceUnavailable)
+			}
+		})
+	}
+}
 
 type SchedulerInterface interface {
 	Reload(ctx context.Context) error
@@ -58,6 +113,7 @@ type Server struct {
 	AppName        string
 	AppDescription string
 	AppVersion     string
+	httpSrv        *http.Server
 }
 
 // Start runs the HTTP server
@@ -114,9 +170,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/transformation/topic-dependencies", s.handleTopicDependencies)
 	mux.HandleFunc("/admin/action", s.handleAdminAction)
 
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.Port),
-		Handler: mux,
+	var handler http.Handler = mux
+	handler = LimitBody(handler)
+	handler = WithRequestID(handler)
+	handler = Throttle(100)(handler)
+	handler = Recover(handler)
+
+	s.httpSrv = &http.Server{
+		Addr:              fmt.Sprintf(":%d", s.Port),
+		Handler:           handler,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 3 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
@@ -127,16 +193,24 @@ func (s *Server) Start() error {
 			if s.SSLKey == "" {
 				s.SSLKey = "server.key"
 			}
-			if err := srv.ListenAndServeTLS(s.SSLCert, s.SSLKey); err != nil && err != http.ErrServerClosed {
+			if err := s.httpSrv.ListenAndServeTLS(s.SSLCert, s.SSLKey); err != nil && err != http.ErrServerClosed {
 				fmt.Printf("ERROR: Failed to start HTTPS server (cert: %s, key: %s): %v\n", s.SSLCert, s.SSLKey, err)
 			}
 		} else {
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := s.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				fmt.Printf("ERROR: Failed to start HTTP server: %v\n", err)
 			}
 		}
 	}()
 
+	return nil
+}
+
+// Stop gracefully shuts down the HTTP server
+func (s *Server) Stop(ctx context.Context) error {
+	if s.httpSrv != nil {
+		return s.httpSrv.Shutdown(ctx)
+	}
 	return nil
 }
 
@@ -230,7 +304,7 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 	for _, job := range jobs {
 		if err := s.Repo.UpsertScheduledProgram(ctx, job); err != nil {
 			s.Repo.LogAdminAction(ctx, username, "update_job_fail", map[string]interface{}{"job": job.Name, "error": err.Error()})
@@ -270,13 +344,13 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, err := s.Repo.GetAllPrograms(context.Background())
+	jobs, err := s.Repo.GetAllPrograms(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to fetch jobs", http.StatusInternalServerError)
 		return
 	}
 
-	s.Repo.LogAdminAction(context.Background(), username, "get_jobs", nil)
+	s.Repo.LogAdminAction(r.Context(), username, "get_jobs", nil)
 
 	type JobResponse struct {
 		db.ScheduledProgram
@@ -335,7 +409,7 @@ func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 	_, err := s.Repo.Pool.Exec(ctx, "DELETE FROM scheduled_programs WHERE name = $1", name)
 	if err != nil {
 		http.Error(w, "Failed to delete job", http.StatusInternalServerError)
@@ -394,7 +468,7 @@ func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 	if err := s.Scheduler.StopJobByName(name); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "stop_job_fail", map[string]string{"name": name, "error": err.Error()})
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -427,7 +501,7 @@ func (s *Server) handleExecuteJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := r.Context()
 	if err := s.Scheduler.RunJobByName(ctx, name); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "execute_job_fail", map[string]string{"name": name, "error": err.Error()})
 		if strings.Contains(err.Error(), "not found") {
@@ -470,7 +544,7 @@ func (s *Server) handleTime(w http.ResponseWriter, r *http.Request) {
 // database is reachable, or HTTP 500 with the error message otherwise.
 // This endpoint is unauthenticated.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
 	if s.Repo == nil || s.Repo.Pool == nil {

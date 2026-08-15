@@ -39,7 +39,7 @@ import (
 var (
 	appName        = "MitM Scheduler"
 	appDescription = "Backend scheduler for the MitM project"
-	version        = "1.0.0"
+	version        = "0.26.0"
 )
 
 func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.AdminUser, kek []byte) {
@@ -304,4 +304,7 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 	sched.Stop(shutdownCtx)
+	if err := httpServer.Stop(shutdownCtx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
 }

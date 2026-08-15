@@ -5,6 +5,18 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.26.0] - 2026-08-15
+
+### Security & Hardening
+- **HTTP Server**: Upgraded the internal web server to production-readiness by implementing comprehensive safeguards:
+  - **Timeouts**: Added explicit `ReadTimeout`, `ReadHeaderTimeout`, `WriteTimeout`, and `IdleTimeout` to mitigate Slowloris and connection starvation attacks.
+  - **Graceful Shutdown**: The HTTP server now listens to termination contexts and shuts down cleanly alongside the job scheduler.
+  - **Panic Recovery Middleware**: Added `Recover` middleware to intercept unhandled panics and return HTTP 500 without crashing the process.
+  - **Request Size Limits**: Implemented `LimitBody` middleware to cap incoming JSON requests at 1 MB, and explicitly raised it to 100 MB for `/admin/upload/source_file` to support CSV/XLSX uploads.
+  - **Context Propagation**: Updated all HTTP handlers to correctly pass `r.Context()` down to the database layer, ensuring background cancellation.
+  - **Correlation IDs**: `WithRequestID` middleware now assigns and tracks a UUID (`X-Request-ID`) for every request.
+  - **Concurrency Throttling**: Added a `Throttle` middleware to cap active connections (max 100) and return HTTP 503 during extreme traffic spikes.
+
 ## [v0.25.0] - 2026-08-10
 
 ### Added
