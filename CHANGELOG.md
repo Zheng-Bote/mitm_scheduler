@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.27.0] - 2026-08-26
+
+### Fixed
+- **Job Concurrency Control**: Implemented an in-memory job control map (`s.running`) in the scheduler to strictly prevent overlapping concurrent executions of the *same* scheduled job program, while allowing different jobs to run in parallel.
+- **Orphaned Runs Cleanup**: Added an automated database cleanup step during scheduler startup. Any previous `program_runs` left incomplete (`finished_at IS NULL`) due to daemon crashes are now correctly marked as failed (`exit_code = -1`, `success = false`), preventing them from permanently appearing active in the DB.
+
 ## [v0.26.0] - 2026-08-15
 
 ### Security & Hardening

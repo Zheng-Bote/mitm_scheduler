@@ -39,7 +39,7 @@ import (
 var (
 	appName        = "MitM Scheduler"
 	appDescription = "Backend scheduler for the MitM project"
-	version        = "0.26.0"
+	version        = "0.27.0"
 )
 
 func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.AdminUser, kek []byte) {
@@ -284,6 +284,13 @@ func main() {
 
 	// Update scheduler's socket path if it changed from the DB config
 	sched.SocketPath = schedCfg.SocketPath
+
+	// Clean up orphaned runs before starting scheduler
+	_, err = repo.Pool.Exec(ctx, "UPDATE program_runs SET finished_at = CURRENT_TIMESTAMP, exit_code = -1, success = false WHERE finished_at IS NULL")
+	if err != nil {
+		log.Printf("Failed to clean up orphaned program runs: %v", err)
+	}
+
 	// 8. Start Scheduler
 	if err := sched.Start(ctx); err != nil {
 		repo.LogSystem(ctx, "ERROR", "Scheduler", fmt.Sprintf("Failed to start scheduler: %v", err))

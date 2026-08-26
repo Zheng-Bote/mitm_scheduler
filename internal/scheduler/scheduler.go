@@ -111,6 +111,17 @@ func (s *Scheduler) Start(ctx context.Context) error {
 func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	ctx := context.Background()
 
+	s.mu.Lock()
+	if p.ID > 0 && s.running[p.ID] {
+		s.mu.Unlock()
+		msg := fmt.Sprintf("Job %s is already running, skipping execution", p.Name)
+		s.Repo.LogSystem(ctx, "INFO", "Scheduler", msg)
+		log.Println(msg)
+		return
+	}
+	s.running[p.ID] = true
+	s.mu.Unlock()
+
 	s.Repo.LogSystem(ctx, "INFO", "Scheduler", fmt.Sprintf("Starting job %s", p.Name))
 
 	// 1. Create run entry in DB
@@ -192,6 +203,7 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 			s.mu.Lock()
 			delete(s.activeCmds, runID)
 			delete(s.activeRuns, runID)
+			delete(s.running, p.ID)
 			s.mu.Unlock()
 		}()
 

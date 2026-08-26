@@ -31,8 +31,5 @@ func (m *MockRepo) LogAdminAction(ctx context.Context, username, action string, 
 }
 
 func TestErrorsBin(t *testing.T) {
-	s := &Server{
-		Repo: &db.Repository{},
-	}
 	// We need a real mock, let's just test Flatbuffers builder
 }
