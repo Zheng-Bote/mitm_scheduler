@@ -21,8 +21,8 @@
 package http
 
 import (
-	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -114,6 +115,14 @@ type Server struct {
 	AppDescription string
 	AppVersion     string
 	httpSrv        *http.Server
+
+	authLimiterMu  sync.Mutex
+	authLimiter    map[string]authAttempt
+}
+
+type authAttempt struct {
+	fails int
+	reset time.Time
 }
 
 // Start runs the HTTP server
@@ -218,16 +227,39 @@ func (s *Server) Stop(ctx context.Context) error {
 // configured admin users. It returns the authenticated username and true
 // on success, or an empty string and false on failure.
 func (s *Server) authenticate(r *http.Request) (string, bool) {
+	ip := strings.Split(r.RemoteAddr, ":")[0]
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		ip = strings.Split(fwd, ",")[0]
+	}
+
+	s.authLimiterMu.Lock()
+	if s.authLimiter == nil {
+		s.authLimiter = make(map[string]authAttempt)
+	}
+	now := time.Now()
+	attempt := s.authLimiter[ip]
+	if now.After(attempt.reset) {
+		attempt.fails = 0
+		attempt.reset = now.Add(time.Minute)
+	}
+	if attempt.fails >= 5 {
+		s.authLimiterMu.Unlock()
+		return "", false // Rate limited
+	}
+	s.authLimiterMu.Unlock()
+
 	user, token, ok := r.BasicAuth()
 	if !ok {
 		return "", false
 	}
 
 	for _, admin := range s.Admins {
-		if admin.Username == user && admin.Token == token {
+		if subtle.ConstantTimeCompare([]byte(admin.Username), []byte(user)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(admin.Token), []byte(token)) == 1 {
 			return user, true
 		}
 	}
+	
 	// Fallback to DB check
 	var hashStr string
 	err := s.Repo.Pool.QueryRow(r.Context(), "SELECT password_hash FROM admin_users WHERE username = $1 AND is_active = true", user).Scan(&hashStr)
@@ -240,11 +272,16 @@ func (s *Server) authenticate(r *http.Request) (string, bool) {
 
 			// derive hash from provided token/password
 			actualHash := crypto.DeriveKey([]byte(token), salt)
-			if bytes.Equal(actualHash, expectedHash) {
+			if subtle.ConstantTimeCompare(actualHash, expectedHash) == 1 {
 				return user, true
 			}
 		}
 	}
+
+	s.authLimiterMu.Lock()
+	attempt.fails++
+	s.authLimiter[ip] = attempt
+	s.authLimiterMu.Unlock()
 
 	return "", false
 }

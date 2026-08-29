@@ -72,7 +72,16 @@ type Repository struct {
 
 // NewRepository creates a new repository with a connection pool
 func NewRepository(ctx context.Context, dsn string) (*Repository, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+	config_pool, err := pgxpool.ParseConfig(dsn)
+	if err == nil {
+		config_pool.MaxConns = 20
+		config_pool.MaxConnIdleTime = 5 * time.Minute
+		config_pool.MaxConnLifetime = 1 * time.Hour
+	}
+	var pool *pgxpool.Pool
+	if err == nil {
+		pool, err = pgxpool.NewWithConfig(ctx, config_pool)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pool: %w", err)
 	}
@@ -121,12 +130,16 @@ func (r *Repository) CreateAuditLog(ctx context.Context, runID int, component, m
 
 // LogAdminAction records an administrative action
 func (r *Repository) LogAdminAction(ctx context.Context, username, action string, details interface{}) {
-	detailsJSON, _ := json.Marshal(details)
+	detailsJSON, err := json.Marshal(details)
+	if err != nil {
+		fmt.Printf("[DB-ADMIN-LOG-ERROR] Failed to marshal details for User: %s, Action: %s: %v\n", username, action, err)
+		detailsJSON = []byte(`{"error":"failed to marshal details"}`)
+	}
 	if r.Pool == nil {
 		fmt.Printf("[DB-ADMIN-LOG-SKIPPED] User: %s, Action: %s, Details: %s\n", username, action, string(detailsJSON))
 		return
 	}
-	_, err := r.Pool.Exec(ctx, "INSERT INTO admin_audit_logs (username, action, details) VALUES ($1, $2, $3)", username, action, detailsJSON)
+	_, err = r.Pool.Exec(ctx, "INSERT INTO admin_audit_logs (username, action, details) VALUES ($1, $2, $3)", username, action, detailsJSON)
 	if err != nil {
 		fmt.Printf("[DB-ADMIN-LOG-ERROR] %v\n", err)
 	}

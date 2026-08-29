@@ -24,8 +24,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"time"
 )
 
 // StatusEvent represents the JSON payload sent by jobs
@@ -56,7 +58,9 @@ func (s *Server) Start() error {
 	}
 
 	// Set permissions for the socket
-	_ = os.Chmod(s.SocketPath, 0666)
+	_ = os.Chmod(s.SocketPath, 0600)
+	
+	sem := make(chan struct{}, 100) // connection limit
 
 	go func() {
 		defer l.Close()
@@ -65,7 +69,11 @@ func (s *Server) Start() error {
 			if err != nil {
 				return
 			}
-			go s.handleConnection(conn)
+			sem <- struct{}{}
+			go func(c net.Conn) {
+				defer func() { <-sem }()
+				s.handleConnection(c)
+			}(conn)
 		}
 	}()
 
@@ -76,7 +84,10 @@ func (s *Server) Start() error {
 // dispatches each parsed StatusEvent to the registered OnEvent callback.
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	scanner := bufio.NewScanner(conn)
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	
+	lr := io.LimitReader(conn, 64*1024) // 64KB limit
+	scanner := bufio.NewScanner(lr)
 	for scanner.Scan() {
 		var event StatusEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err == nil {

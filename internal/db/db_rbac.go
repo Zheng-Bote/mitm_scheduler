@@ -141,9 +141,15 @@ func (r *Repository) GetUserRolesByUsername(ctx context.Context, username string
 
 	// Fetch role names
 	var roleNames []string
-	for _, id := range roleIDs {
+	rows, err := r.Pool.Query(ctx, "SELECT name FROM roles WHERE id = ANY($1)", roleIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
 		var name string
-		if err := r.Pool.QueryRow(ctx, "SELECT name FROM roles WHERE id = $1", id).Scan(&name); err == nil {
+		if err := rows.Scan(&name); err == nil {
 			roleNames = append(roleNames, name)
 		}
 	}

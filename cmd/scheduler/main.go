@@ -39,7 +39,7 @@ import (
 var (
 	appName        = "MitM Scheduler"
 	appDescription = "Backend scheduler for the MitM project"
-	version        = "0.27.0"
+	version        = "0.28.0"
 )
 
 func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.AdminUser, kek []byte) {
@@ -160,15 +160,13 @@ func main() {
 	}
 
 	if os.Getenv("MASTER_KEY") == "" {
-		log.Println("DEBUG: Using default MASTER_KEY")
-		os.Setenv("MASTER_KEY", "6mkdHpNHfF5bdCMj/+MeYAM4wVMy3nJ9FRxpSibhumE=")
+		log.Fatal("MASTER_KEY environment variable is required")
 	}
 
 	// 1. Get Password
 	password := os.Getenv("SCHEDULER_PASSWORD")
 	if password == "" {
-		log.Println("DEBUG: Using default SCHEDULER_PASSWORD")
-		password = "Sidolin1"
+		log.Fatal("SCHEDULER_PASSWORD environment variable is required")
 	}
 
 	// 2. Load Config

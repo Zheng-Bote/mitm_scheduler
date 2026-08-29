@@ -6,9 +6,40 @@ import (
 	"strconv"
 )
 
-func (s *Server) handleGetRoles(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.authenticate(r); !ok {
+
+func (s *Server) requireAdmin(w http.ResponseWriter, r *http.Request) (string, bool) {
+	username, ok := s.authenticate(r)
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return "", false
+	}
+	isAdmin := false
+	for _, admin := range s.Admins {
+		if admin.Username == username {
+			isAdmin = true
+			break
+		}
+	}
+	if !isAdmin {
+		roleNames, err := s.Repo.GetUserRolesByUsername(r.Context(), username, s.KEK)
+		if err == nil {
+			for _, role := range roleNames {
+				if role == "ADMIN" {
+					isAdmin = true
+					break
+				}
+			}
+		}
+	}
+	if !isAdmin {
+		http.Error(w, "Forbidden: ADMIN role required", http.StatusForbidden)
+		return "", false
+	}
+	return username, true
+}
+
+func (s *Server) handleGetRoles(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireAdmin(w, r); !ok {
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -27,8 +58,7 @@ func (s *Server) handleGetRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.authenticate(r); !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if _, ok := s.requireAdmin(w, r); !ok {
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -47,9 +77,8 @@ func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAssignRoles(w http.ResponseWriter, r *http.Request) {
-	adminUser, ok := s.authenticate(r)
+	adminUser, ok := s.requireAdmin(w, r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -77,8 +106,7 @@ func (s *Server) handleAssignRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetUserRoles(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.authenticate(r); !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if _, ok := s.requireAdmin(w, r); !ok {
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -104,9 +132,8 @@ func (s *Server) handleGetUserRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	adminUser, ok := s.authenticate(r)
+	adminUser, ok := s.requireAdmin(w, r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -138,9 +165,8 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
-	adminUser, ok := s.authenticate(r)
+	adminUser, ok := s.requireAdmin(w, r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if r.Method != http.MethodDelete {
@@ -166,6 +192,10 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetOsUserRoles(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.authenticate(r); !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

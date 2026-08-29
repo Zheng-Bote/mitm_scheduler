@@ -27,6 +27,16 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type BackupPayload struct {
+		Version string                       `json:"version"`
+		Data    map[string][]json.RawMessage `json:"data"`
+	}
+
+	payload := BackupPayload{
+		Version: s.AppVersion,
+		Data:    make(map[string][]json.RawMessage),
+	}
+
 	tables := []string{
 		"scheduled_programs",
 		"source_credentials",
@@ -39,20 +49,19 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 		"topic_dependencies",
 	}
 
-	backupData := make(map[string][]json.RawMessage)
 	for _, t := range tables {
 		data, err := s.Repo.ExportConfigTable(r.Context(), t)
 		if err != nil {
 			http.Error(w, "Failed to export table "+t+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		backupData[t] = data
+		payload.Data[t] = data
 	}
 
 	s.Repo.LogAdminAction(r.Context(), username, "BACKUP_CONFIG", nil)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(backupData)
+	json.NewEncoder(w).Encode(payload)
 }
 
 // handleRestore imports configuration from JSON
@@ -77,11 +86,23 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var backupData map[string][]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&backupData); err != nil {
+	type BackupPayload struct {
+		Version string                       `json:"version"`
+		Data    map[string][]json.RawMessage `json:"data"`
+	}
+
+	var payload BackupPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+
+	if payload.Version != s.AppVersion {
+		http.Error(w, "Version mismatch: cannot restore backup from version "+payload.Version, http.StatusBadRequest)
+		return
+	}
+
+	backupData := payload.Data
 
 	// Important: Order of insertion must respect foreign key constraints
 	tables := []string{

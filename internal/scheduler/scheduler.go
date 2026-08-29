@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -127,6 +128,9 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	// 1. Create run entry in DB
 	runID, err := s.Repo.CreateProgramRun(ctx, p.ID, 0)
 	if err != nil {
+		s.mu.Lock()
+		delete(s.running, p.ID)
+		s.mu.Unlock()
 		s.Repo.LogSystem(ctx, "ERROR", "Scheduler", fmt.Sprintf("Failed to create program run for %s: %v", p.Name, err))
 		log.Printf("Failed to create program run for %s: %v", p.Name, err)
 		return
@@ -139,7 +143,22 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	}
 	cmd := exec.Command(p.Command, argsJSON)
 
-	cmd.Env = append(os.Environ(),
+	whitelist := []string{"PATH", "SYSTEMROOT", "USERPROFILE", "HOME", "TEMP", "TMP"}
+	cleanEnv := []string{}
+	for _, envStr := range os.Environ() {
+		parts := strings.SplitN(envStr, "=", 2)
+		if len(parts) > 0 {
+			key := strings.ToUpper(parts[0])
+			for _, w := range whitelist {
+				if key == w {
+					cleanEnv = append(cleanEnv, envStr)
+					break
+				}
+			}
+		}
+	}
+
+	cmd.Env = append(cleanEnv,
 		fmt.Sprintf("RUN_ID=%d", runID),
 		fmt.Sprintf("SCHEDULER_SOCKET_PATH=%s", s.SocketPath),
 		fmt.Sprintf("MITM_DB_CONFIG_JSON=%s", s.DBConfigJSON),
