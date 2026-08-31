@@ -29,6 +29,12 @@ import (
 
 // handleDLQBin handles GET requests for dead letter queue entries as FlatBuffers binary data.
 func (s *Server) handleDLQBin(w http.ResponseWriter, r *http.Request) {
+	username, ok := s.authenticate(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	_ = username
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return

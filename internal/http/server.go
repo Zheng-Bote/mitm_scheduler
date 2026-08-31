@@ -880,6 +880,12 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 
 // handleDLQ handles GET requests for dead letter queue entries
 func (s *Server) handleDLQ(w http.ResponseWriter, r *http.Request) {
+	username, ok := s.authenticate(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	_ = username
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return

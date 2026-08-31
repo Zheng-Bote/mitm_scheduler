@@ -192,8 +192,8 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetOsUserRoles(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.authenticate(r); !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if _, ok := s.requireAdmin(w, r); !ok {
+		// http.Error is already called inside requireAdmin on failure
 		return
 	}
 	if r.Method != http.MethodGet {
