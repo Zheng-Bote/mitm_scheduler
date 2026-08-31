@@ -5,6 +5,16 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.29.0] - 2026-08-31
+
+### Added
+
+- **IPC Socket as Credential Broker**: The scheduler now acts as a credential broker for the collector, transformation, delivery, and cleanup components. It serves database credentials and the master key over its Unix Domain Socket in response to `get_credentials` requests (identified via `RUN_ID`).
+
+### Changed
+
+- **Administrative RBAC Authorization**: Hardened `handleDLQ` and `handleDLQBin` to require authentication and upgraded `handleGetOsUserRoles` to enforce `requireAdmin`, blocking unauthenticated or unprivileged access to administrative functionality.
+
 ## [v0.28.0] - 2026-08-29
 
 ### Changed/Added
