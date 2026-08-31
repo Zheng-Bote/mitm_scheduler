@@ -272,6 +272,13 @@ func main() {
 				log.Printf("Failed to save IPC event to DB: %v", err)
 			}
 		},
+		OnCredentialsRequest: func(runID int) (ipc.CredentialsResponse, error) {
+			// NOTE: Consider adding peer credential PID/RunID validation here in the future
+			return ipc.CredentialsResponse{
+				MasterKey:    os.Getenv("MASTER_KEY"),
+				DBConfigJSON: string(dbConfigBytes),
+			}, nil
+		},
 	}
 	if err := ipcServer.Start(); err != nil {
 		repo.LogSystem(ctx, "ERROR", "IPC", fmt.Sprintf("Failed to start IPC server: %v", err))

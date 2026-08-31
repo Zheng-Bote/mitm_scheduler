@@ -23,7 +23,6 @@ package scheduler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -161,29 +160,7 @@ func (s *Scheduler) RunProgram(p db.ScheduledProgram) {
 	cmd.Env = append(cleanEnv,
 		fmt.Sprintf("RUN_ID=%d", runID),
 		fmt.Sprintf("SCHEDULER_SOCKET_PATH=%s", s.SocketPath),
-		fmt.Sprintf("MITM_DB_CONFIG_JSON=%s", s.DBConfigJSON),
 	)
-
-	var dbCfg struct {
-		DB struct {
-			Host     string `json:"host"`
-			Port     int    `json:"port"`
-			User     string `json:"user"`
-			Password string `json:"password"`
-			Database string `json:"database"`
-			SSLMode  bool   `json:"sslmode"`
-		} `json:"db"`
-	}
-	if err := json.Unmarshal([]byte(s.DBConfigJSON), &dbCfg); err == nil {
-		cmd.Env = append(cmd.Env,
-			fmt.Sprintf("MITM_DB_HOST=%s", dbCfg.DB.Host),
-			fmt.Sprintf("MITM_DB_PORT=%d", dbCfg.DB.Port),
-			fmt.Sprintf("MITM_DB_USER=%s", dbCfg.DB.User),
-			fmt.Sprintf("MITM_DB_PASSWORD=%s", dbCfg.DB.Password),
-			fmt.Sprintf("MITM_DB_NAME=%s", dbCfg.DB.Database),
-			fmt.Sprintf("MITM_DB_SSLMODE=%t", dbCfg.DB.SSLMode),
-		)
-	}
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

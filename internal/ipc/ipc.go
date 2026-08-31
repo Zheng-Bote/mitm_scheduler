@@ -40,10 +40,17 @@ type StatusEvent struct {
 	Progress  int    `json:"progress"`
 }
 
-// Server listens for StatusEvents on a Unix Domain Socket
+// CredentialsResponse represents the secrets returned to a job
+type CredentialsResponse struct {
+	MasterKey    string `json:"master_key"`
+	DBConfigJSON string `json:"db_config_json"`
+}
+
+// Server listens for events and requests on a Unix Domain Socket
 type Server struct {
-	SocketPath string
-	OnEvent    func(event StatusEvent)
+	SocketPath           string
+	OnEvent              func(event StatusEvent)
+	OnCredentialsRequest func(runID int) (CredentialsResponse, error)
 }
 
 // Start runs the Unix Domain Socket server
@@ -81,7 +88,7 @@ func (s *Server) Start() error {
 }
 
 // handleConnection reads JSON-Lines from a connected Unix socket client and
-// dispatches each parsed StatusEvent to the registered OnEvent callback.
+// dispatches each parsed request to the appropriate callback.
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
@@ -89,6 +96,27 @@ func (s *Server) handleConnection(conn net.Conn) {
 	lr := io.LimitReader(conn, 64*1024) // 64KB limit
 	scanner := bufio.NewScanner(lr)
 	for scanner.Scan() {
+		var generic map[string]interface{}
+		if err := json.Unmarshal(scanner.Bytes(), &generic); err == nil {
+			if t, ok := generic["type"].(string); ok && t == "get_credentials" {
+				if runIDFloat, ok := generic["run_id"].(float64); ok {
+					if s.OnCredentialsRequest != nil {
+						resp, err := s.OnCredentialsRequest(int(runIDFloat))
+						if err == nil {
+							b, _ := json.Marshal(resp)
+							conn.Write(append(b, '\n'))
+						} else {
+							// Optionally log or send an error response
+							errResp := map[string]string{"error": err.Error()}
+							b, _ := json.Marshal(errResp)
+							conn.Write(append(b, '\n'))
+						}
+					}
+				}
+				continue
+			}
+		}
+
 		var event StatusEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err == nil {
 			if s.OnEvent != nil {
@@ -118,4 +146,34 @@ func (c *Client) SendEvent(event StatusEvent) error {
 
 	_, err = conn.Write(append(data, '\n'))
 	return err
+}
+
+// GetCredentials requests the MasterKey and DB configuration from the scheduler
+func (c *Client) GetCredentials(runID int) (CredentialsResponse, error) {
+	var resp CredentialsResponse
+	conn, err := net.Dial("unix", c.SocketPath)
+	if err != nil {
+		return resp, err
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	req := map[string]interface{}{
+		"type":   "get_credentials",
+		"run_id": runID,
+	}
+	data, _ := json.Marshal(req)
+	if _, err := conn.Write(append(data, '\n')); err != nil {
+		return resp, err
+	}
+
+	scanner := bufio.NewScanner(conn)
+	if scanner.Scan() {
+		err = json.Unmarshal(scanner.Bytes(), &resp)
+		return resp, err
+	}
+	if err := scanner.Err(); err != nil {
+		return resp, err
+	}
+	return resp, fmt.Errorf("no response from scheduler")
 }
