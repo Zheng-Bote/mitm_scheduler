@@ -549,3 +549,31 @@ func (r *Repository) RequeueDLQEntries(ctx context.Context, dlqIDs []string) err
 
 	return tx.Commit(ctx)
 }
+
+type DashboardStats struct {
+	DBName    string `json:"db_name"`
+	DBVersion string `json:"db_version"`
+	DBSize    string `json:"db_size"`
+	DLQCount  int    `json:"dlq_count"`
+}
+
+func (r *Repository) GetDashboardStats(ctx context.Context) (*DashboardStats, error) {
+	stats := &DashboardStats{}
+	
+	// Get DB info
+	err := r.Pool.QueryRow(ctx, `
+		SELECT current_database(), version(), pg_size_pretty(pg_database_size(current_database()))
+	`).Scan(&stats.DBName, &stats.DBVersion, &stats.DBSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query db info: %w", err)
+	}
+
+	// Get DLQ count
+	err = r.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM delivery_dlq`).Scan(&stats.DLQCount)
+	if err != nil {
+		// If table doesn't exist or other error, set to 0 and log
+		stats.DLQCount = 0
+	}
+
+	return stats, nil
+}

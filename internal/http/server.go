@@ -138,6 +138,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/info", s.handleInfo)
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/time", s.handleTime)
+	mux.HandleFunc("/admin/dashboard/stats", s.handleDashboardStats)
 	mux.HandleFunc("/admin/update-jobs", s.handleUpdateJobs)
 	mux.HandleFunc("/admin/jobs", s.handleGetJobs)
 	mux.HandleFunc("/admin/delete-job", s.handleDeleteJob)
@@ -940,4 +941,16 @@ func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
 	s.Repo.LogAdminAction(ctx, username, "dlq_requeue_success", map[string]interface{}{"ids": ids, "count": len(ids)})
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Successfully requeued %d DLQ entries", len(ids))))
+}
+
+// handleDashboardStats returns dashboard information including DB stats and DLQ count.
+func (s *Server) handleDashboardStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := s.Repo.GetDashboardStats(r.Context())
+	if err != nil {
+		s.Repo.LogSystem(r.Context(), "ERROR", "HTTP", "Dashboard stats failed: "+err.Error())
+		http.Error(w, "Failed to get dashboard stats", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
 }
