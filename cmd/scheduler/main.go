@@ -36,10 +36,12 @@ import (
 	"go-scheduler/internal/scheduler"
 )
 
+const defaultVersion = "0.30.0"
+
 var (
 	appName        = "MitM Scheduler"
 	appDescription = "Backend scheduler for the MitM project"
-	version        = "0.29.0"
+	version        = defaultVersion
 )
 
 func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.AdminUser, kek []byte) {
@@ -137,6 +139,9 @@ func bootstrapAdmins(ctx context.Context, repo *db.Repository, admins []config.A
 }
 
 func main() {
+	if version == "" {
+		version = defaultVersion
+	}
 	version = strings.Split(version, "-")[0]
 
 	var configPath string
