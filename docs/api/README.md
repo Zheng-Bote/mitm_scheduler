@@ -14,6 +14,11 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | `/health` | `GET` | Health check (verifies database ping) | None | Public (Unauthenticated) |
 | `/info` | `GET` | Service descriptor, name, version | None | Public (Unauthenticated) |
 
+### Dashboard
+| URL | Method | Description | Options / Parameters | Authentication / Role |
+| :--- | :--- | :--- | :--- | :--- |
+| `/admin/dashboard/stats` | `GET` | Get Database information (name, version, size) and Dead Letter Queue entry count | None | Admin (HTTP Basic Auth) |
+
 ### Job Management
 | URL | Method | Description | Options / Parameters | Authentication / Role |
 | :--- | :--- | :--- | :--- | :--- |
@@ -169,3 +174,17 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 *   **Method**: `GET`
 *   **Parameters** (for log download endpoints): `from`, `to` (RFC3339 timestamp or YYYY-MM-DD date, optional)
 *   **Response**: Returns an `application/octet-stream` binary stream encoded using Google FlatBuffers schemas (defined in `scheduler/mitm_scheduler/schematas/`). For log download endpoints (`/admin/logs/*_bin`), a `Content-Disposition` attachment header is also included (e.g. `filename=system_logs.bin`).
+
+### 2.11 Dashboard Stats
+*   **Path**: `/admin/dashboard/stats`
+*   **Method**: `GET`
+*   **Description**: Retrieves core statistics for the admin dashboard including PostgreSQL database information and Dead Letter Queue entry count.
+*   **Response**: `200 OK` (Content-Type: `application/json`)
+    ```json
+    {
+      "db_name": "mitm_db",
+      "db_version": "PostgreSQL 16.3 on x86_64-pc-linux-musl...",
+      "db_size": "45 MB",
+      "dlq_count": 12
+    }
+    ```

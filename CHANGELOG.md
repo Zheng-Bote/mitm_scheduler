@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.30.2] - 2026-09-02
+
+### Changed
+
+- **API**: Improved formatting of the `db_version` field in the `/admin/dashboard/stats` endpoint. It now returns a shortened, readable version string (e.g., "PostgreSQL 18.2") instead of the verbose compiler output.
+
 ## [v0.30.1] - 2026-09-02
 
 ### Fixed

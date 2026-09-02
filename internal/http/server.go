@@ -945,6 +945,14 @@ func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
 
 // handleDashboardStats returns dashboard information including DB stats and DLQ count.
 func (s *Server) handleDashboardStats(w http.ResponseWriter, r *http.Request) {
+	username, ok := s.authenticate(r)
+	if !ok {
+		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	_ = username
+
 	stats, err := s.Repo.GetDashboardStats(r.Context())
 	if err != nil {
 		s.Repo.LogSystem(r.Context(), "ERROR", "HTTP", "Dashboard stats failed: "+err.Error())

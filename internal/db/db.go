@@ -568,6 +568,12 @@ func (r *Repository) GetDashboardStats(ctx context.Context) (*DashboardStats, er
 		return nil, fmt.Errorf("failed to query db info: %w", err)
 	}
 
+	// Trim the long version string to just "PostgreSQL XX.Y"
+	versionParts := strings.Split(stats.DBVersion, " (")
+	if len(versionParts) > 0 {
+		stats.DBVersion = versionParts[0]
+	}
+
 	// Get DLQ count
 	err = r.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM delivery_dlq`).Scan(&stats.DLQCount)
 	if err != nil {
