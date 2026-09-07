@@ -26,6 +26,7 @@
   - [3. Database Setup](#3-database-setup)
   - [4. Configuration](#4-configuration)
 - [Running the Scheduler](#running-the-scheduler)
+  - [Generating a MASTER_KEY](#generating-a-master_key)
 - [Administrative Tools](#administrative-tools)
   - [1. GUI Admin Tool (Fyne)](#1-gui-admin-tool-fyne)
   - [2. Remote REST API](#2-remote-rest-api)
