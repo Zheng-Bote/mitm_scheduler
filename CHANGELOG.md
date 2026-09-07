@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.30.3] - 2026-09-07
+
+### Fixed
+
+- **API**: Hardened the PostgreSQL version string extraction logic for the `/admin/dashboard/stats` endpoint. Replaced the simplistic `strings.Split` method with a robust Regular Expression (`^PostgreSQL [0-9.]+`) to ensure the version (e.g., "PostgreSQL 18.4") is properly trimmed across different OS distributions and compiler outputs.
+
 ## [v0.30.2] - 2026-09-02
 
 ### Changed

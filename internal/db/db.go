@@ -22,6 +22,7 @@ package db
 
 import (
 	"context"
+	"regexp"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -569,9 +570,9 @@ func (r *Repository) GetDashboardStats(ctx context.Context) (*DashboardStats, er
 	}
 
 	// Trim the long version string to just "PostgreSQL XX.Y"
-	versionParts := strings.Split(stats.DBVersion, " (")
-	if len(versionParts) > 0 {
-		stats.DBVersion = versionParts[0]
+	re := regexp.MustCompile(`^PostgreSQL [0-9.]+`)
+	if match := re.FindString(stats.DBVersion); match != "" {
+		stats.DBVersion = match
 	}
 
 	// Get DLQ count
