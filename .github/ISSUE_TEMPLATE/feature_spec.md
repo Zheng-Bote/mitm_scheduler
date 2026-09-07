@@ -18,7 +18,7 @@ _What components (Collectors, Transformation, Delivery) does this affect?_
 
 Please confirm that this feature respects the global `mitm-2` constraints defined in `.sdd` files:
 
-- [ ] **Architecture:** The layered architecture is maintained (no direct bypass from Collector to Delivery).
+- [ ] **Architecture:** The layered architecture is maintained (e.g. no direct bypass from Collector to Delivery).
 - [ ] **Architecture:** Feature affects architecture: SpecKit feature forces update of the SpecDD .sdd
 - [ ] **Security:** Envelope Encryption (AES-GCM) is NOT bypassed for PII data.
 - [ ] **Data Model:** Core PostgreSQL schemas remain intact (feature-specific tables are allowed).
