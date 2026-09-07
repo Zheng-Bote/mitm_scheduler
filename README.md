@@ -146,11 +146,31 @@ Encrypt it:
 
 ## Running the Scheduler
 
+The Scheduler requires two critical environment variables to start:
+1. `SCHEDULER_PASSWORD`: The password used to decrypt the `config.json.enc` file.
+2. `MASTER_KEY`: The base64-encoded Key Encryption Key (KEK) used for Envelope Encryption.
+
 ```bash
+export SCHEDULER_PASSWORD="your_secure_password"
+export MASTER_KEY="your_base64_master_key"
 ./scheduler config.json.enc
 ```
 
-Decryption password can be provided via prompt or `SCHEDULER_PASSWORD` environment variable.
+### Generating a MASTER_KEY
+
+The `MASTER_KEY` must be a cryptographically secure 32-byte key, encoded in Base64. You can generate a new one using either `openssl` or Go:
+
+**Using OpenSSL:**
+```bash
+openssl rand -base64 32
+```
+
+**Using Go:**
+```bash
+go run -e 'import ("crypto/rand"; "encoding/base64"; "fmt"); b := make([]byte, 32); rand.Read(b); fmt.Println(base64.StdEncoding.EncodeToString(b))'
+```
+
+> **Warning:** Do not change the `MASTER_KEY` on an existing installation without first re-wrapping all existing Data Encryption Keys (DEKs) in the `storage_keys` database table. If you start the scheduler with a new `MASTER_KEY`, it will fail to decrypt existing payloads!
 
 ## Administrative Tools
 
@@ -231,15 +251,9 @@ When the scheduler starts a job, it securely passes configuration and context vi
 
 - `RUN_ID`: The unique ID of the current job execution.
 - `SCHEDULER_SOCKET_PATH`: The path to the Unix domain socket for IPC communication.
-- `MITM_DB_CONFIG_JSON`: The complete, raw database configuration JSON string containing the nested `"db"` structure.
-- `MITM_DB_HOST`: Target MitM database hostname.
-- `MITM_DB_PORT`: Target MitM database port.
-- `MITM_DB_USER`: Target MitM database username.
-- `MITM_DB_PASSWORD`: Target MitM database password.
-- `MITM_DB_NAME`: Target MitM database name.
-- `MITM_DB_SSLMODE`: Derived from the `sslmode` attribute in `config.json` (`true` or `false`). Instructs child processes whether to enforce SSL connections.
-
-These variables allow data collectors to connect to the central MitM database or communicate with the scheduler without relying on CLI arguments or local configuration files.
+**Note on Security (Master Key & DB Config):**
+For security reasons, sensitive data like the **MASTER_KEY** (KEK) and the database credentials (`MITM_DB_CONFIG_JSON`) are **NOT** injected as environment variables, to prevent accidental exposure via `ps` or crash dumps. 
+Instead, child processes (jobs) must fetch these credentials securely at runtime by sending a `get_credentials` IPC request to the scheduler via the Unix domain socket.
 
 ## IPC & Job Communication
 
