@@ -37,6 +37,7 @@
 - [Injected Environment Variables](#injected-environment-variables)
 - [IPC & Job Communication](#ipc-job-communication)
 - [Docker](#docker)
+- [Key Rotation](#key-rotation)
 
 </details>
 
