@@ -72,10 +72,13 @@ type Repository struct {
 }
 
 // NewRepository creates a new repository with a connection pool
-func NewRepository(ctx context.Context, dsn string) (*Repository, error) {
+func NewRepository(ctx context.Context, dsn string, maxConns int) (*Repository, error) {
 	config_pool, err := pgxpool.ParseConfig(dsn)
 	if err == nil {
-		config_pool.MaxConns = 20
+		if maxConns <= 0 {
+			maxConns = 20
+		}
+		config_pool.MaxConns = int32(maxConns)
 		config_pool.MaxConnIdleTime = 5 * time.Minute
 		config_pool.MaxConnLifetime = 1 * time.Hour
 	}

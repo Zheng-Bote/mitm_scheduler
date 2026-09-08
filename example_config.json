@@ -6,7 +6,8 @@
     "password": "your_secure_password",
     "database": "scheduler_db",
     "db_connect_delay": 10,
-    "sslmode": false
+    "sslmode": false,
+    "max_conns": 50
   },
   "http_port": 8080,
   "use_https": false,
