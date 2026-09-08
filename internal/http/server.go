@@ -158,6 +158,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/dlq/requeue", s.handleDLQRequeue)
 	mux.HandleFunc("/admin/backup", s.handleBackup)
 	mux.HandleFunc("/admin/restore", s.handleRestore)
+	mux.HandleFunc("/admin/storage-keys", s.handleGetStorageKeys)
 
 	// RBAC routes
 	mux.HandleFunc("/admin/rbac/roles", s.handleGetRoles)
