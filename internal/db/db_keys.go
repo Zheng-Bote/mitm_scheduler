@@ -19,6 +19,7 @@ package db
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 )
 
@@ -36,11 +37,11 @@ func (r *Repository) GetAllActiveWrappedKeys(ctx context.Context) ([]string, err
 	defer rowsStorage.Close()
 
 	for rowsStorage.Next() {
-		var key string
-		if err := rowsStorage.Scan(&key); err != nil {
+		var keyBytes []byte
+		if err := rowsStorage.Scan(&keyBytes); err != nil {
 			return nil, fmt.Errorf("failed to scan storage_keys row: %w", err)
 		}
-		keys = append(keys, key)
+		keys = append(keys, base64.StdEncoding.EncodeToString(keyBytes))
 	}
 
 	if err := rowsStorage.Err(); err != nil {
@@ -56,14 +57,11 @@ func (r *Repository) GetAllActiveWrappedKeys(ctx context.Context) ([]string, err
 	defer rowsUsers.Close()
 
 	for rowsUsers.Next() {
-		var key string
-		if err := rowsUsers.Scan(&key); err != nil {
+		var keyBytes []byte
+		if err := rowsUsers.Scan(&keyBytes); err != nil {
 			return nil, fmt.Errorf("failed to scan user_roles_encrypted row: %w", err)
 		}
-		// Avoid duplicates if needed, though they shouldn't be duplicated usually,
-		// or just append them all and the client will iterate over all keys.
-		// For safety and efficiency on client side, we can deduplicate here.
-		keys = append(keys, key)
+		keys = append(keys, base64.StdEncoding.EncodeToString(keyBytes))
 	}
 
 	if err := rowsUsers.Err(); err != nil {
