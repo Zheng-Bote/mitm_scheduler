@@ -279,3 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unix Domain Socket IPC listener for receiving runtime status/audit notifications from running collectors.
 - Database auditing schema including `system_logs`, `job_status_events`, and `job_audit_logs`.
 - Multi-platform `scheduler-admin` client built with Fyne.
+## [1.2.0] - 2026-09-08
+### Added
+- **Key Rotation**: Ported the key rotation logic natively into the Scheduler. Added POST /admin/key-rotation API endpoint to receive a new Master Key (KEK) encrypted with the current key, pause all active jobs, perform cryptographic DEK rotation in the database, update the KEK in memory, and resume scheduling.
+

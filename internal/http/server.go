@@ -99,6 +99,8 @@ type SchedulerInterface interface {
 	RunJobByName(ctx context.Context, name string) error
 	GetActivePIDs() map[string]int
 	StopJobByName(name string) error
+	Pause(ctx context.Context)
+	Resume(ctx context.Context) error
 }
 
 type Server struct {
@@ -180,6 +182,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/transformation/errors_bin", s.handleTransformationErrorsBin)
 	mux.HandleFunc("/admin/transformation/topic-dependencies", s.handleTopicDependencies)
 	mux.HandleFunc("/admin/action", s.handleAdminAction)
+	mux.HandleFunc("/admin/key-rotation", s.handleKeyRotation)
 
 	var handler http.Handler = mux
 	handler = LimitBody(handler)

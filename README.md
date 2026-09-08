@@ -289,3 +289,7 @@ Run:
 ```bash
 docker run -p 8080:8080 -e SCHEDULER_PASSWORD=mypassword go-scheduler ./scheduler /app/config.json.enc
 ```
+## Key Rotation
+
+The MitM Data Aggregator supports native on-the-fly key rotation via the /admin/key-rotation API endpoint. The new Master Key must be encrypted with the current Master Key. During rotation, all active jobs are paused, the Data Encryption Keys (DEKs) in the database are re-encrypted with the new KEK, the in-memory KEK is updated, and normal operation resumes automatically.
+
