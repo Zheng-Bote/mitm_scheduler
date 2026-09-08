@@ -46,6 +46,7 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | URL | Method | Description | Options / Parameters | Authentication / Role |
 | :--- | :--- | :--- | :--- | :--- |
 | `/admin/storage-keys` | `GET` | Retrieves all active wrapped encryption keys (DEKs) | None | Admin (HTTP Basic Auth) |
+| `/admin/key-rotation` | `POST`| Triggers native Key Rotation (updates KEK and database DEKs) | Request Body: JSON (encrypted new Master-Key) | Admin (HTTP Basic Auth + RBAC `ADMIN` role) |
 
 ### Logs & Auditing
 | URL | Method | Description | Options / Parameters | Authentication / Role |
@@ -205,3 +206,17 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
       "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4"
     ]
     ```
+
+### 2.13 Key Rotation
+*   **Path**: `/admin/key-rotation`
+*   **Method**: `POST`
+*   **Description**: Receives a new securely generated Master-Key (KEK) encrypted with the current Master-Key using AES-GCM. The Scheduler decrypts the payload, pauses job execution, unwraps and re-wraps all database DEKs with the new key, applies the new key to its RAM, and resumes execution.
+*   **Request Body**:
+    ```json
+    {
+      "nonce": "Base64EncodedNonce==",
+      "ciphertext": "Base64EncodedEncryptedNewKey=="
+    }
+    ```
+*   **Authentication / Role**: Requires valid HTTP Basic Auth credentials and the user must have the `ADMIN` role.
+*   **Response**: `200 OK` (Body: `Key rotation completed successfully`) or `400 Bad Request` / `403 Forbidden` / `500 Internal Server Error`.
