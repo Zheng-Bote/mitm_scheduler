@@ -42,6 +42,11 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
 | `/admin/credentials` | `GET`, `POST` | List or update source credentials | Request Body: JSON | Admin (HTTP Basic Auth) |
 | `/admin/delivery_targets`| `GET`, `POST`, `DELETE` | List, update, or delete delivery targets | Request Body: JSON, or `id` (Query parameter) | Admin (HTTP Basic Auth) |
 
+### Security & Cryptography
+| URL | Method | Description | Options / Parameters | Authentication / Role |
+| :--- | :--- | :--- | :--- | :--- |
+| `/admin/storage-keys` | `GET` | Retrieves all active wrapped encryption keys (DEKs) | None | Admin (HTTP Basic Auth) |
+
 ### Logs & Auditing
 | URL | Method | Description | Options / Parameters | Authentication / Role |
 | :--- | :--- | :--- | :--- | :--- |
@@ -187,4 +192,16 @@ The server's HTTP engine is implemented in the `internal/http` package. The port
       "db_size": "45 MB",
       "dlq_count": 12
     }
+    ```
+
+### 2.12 Security & Keys
+*   **Path**: `/admin/storage-keys`
+*   **Method**: `GET`
+*   **Description**: Retrieves a list of all active wrapped encryption keys (DEKs) from the `storage_keys` and `user_roles_encrypted` tables for the Envelope Decryption capabilities in the frontend.
+*   **Response**: `200 OK` (Content-Type: `application/json`)
+    ```json
+    [
+      "XzB+Y2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6MTIzNDU2Nzg5MA==",
+      "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4"
+    ]
     ```
