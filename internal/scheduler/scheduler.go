@@ -350,3 +350,26 @@ func (s *Scheduler) StopJobByName(name string) error {
 
 	return nil
 }
+
+// Pause stops new cron executions and waits for active jobs to finish
+func (s *Scheduler) Pause(ctx context.Context) {
+	s.Cron.Stop()
+	
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		log.Println("Scheduler paused: all jobs finished.")
+	case <-ctx.Done():
+		log.Println("Scheduler pause wait timeout exceeded.")
+	}
+}
+
+// Resume restarts the cron scheduler
+func (s *Scheduler) Resume(ctx context.Context) error {
+	return s.Reload(ctx)
+}

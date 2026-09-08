@@ -219,3 +219,58 @@ func GenerateWrappedDEK(kek []byte) ([]byte, error) {
 
 	return wrappedKey, nil
 }
+
+// UnwrapDEK unwraps a DEK using the given KEK
+func UnwrapDEK(wrappedKey, kek []byte) ([]byte, error) {
+	if len(kek) != 32 {
+		adjusted := make([]byte, 32)
+		copy(adjusted, kek)
+		kek = adjusted
+	}
+	if len(wrappedKey) < 12 {
+		return nil, errors.New("wrapped DEK too short")
+	}
+	dekNonce := wrappedKey[:12]
+	wrappedCipher := wrappedKey[12:]
+
+	kekBlock, err := aes.NewCipher(kek)
+	if err != nil {
+		return nil, err
+	}
+	kekGCM, err := cipher.NewGCM(kekBlock)
+	if err != nil {
+		return nil, err
+	}
+	dek, err := kekGCM.Open(nil, dekNonce, wrappedCipher, nil)
+	if err != nil {
+		return nil, errors.New("failed to decrypt DEK")
+	}
+	return dek, nil
+}
+
+// WrapDEK wraps a DEK using the given KEK
+func WrapDEK(dek, kek []byte) ([]byte, error) {
+	if len(kek) != 32 {
+		adjusted := make([]byte, 32)
+		copy(adjusted, kek)
+		kek = adjusted
+	}
+	dekNonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, dekNonce); err != nil {
+		return nil, err
+	}
+	kekBlock, err := aes.NewCipher(kek)
+	if err != nil {
+		return nil, err
+	}
+	kekGCM, err := cipher.NewGCM(kekBlock)
+	if err != nil {
+		return nil, err
+	}
+	wrappedCipher := kekGCM.Seal(nil, dekNonce, dek, nil)
+	
+	wrappedKey := make([]byte, len(dekNonce)+len(wrappedCipher))
+	copy(wrappedKey, dekNonce)
+	copy(wrappedKey[len(dekNonce):], wrappedCipher)
+	return wrappedKey, nil
+}
