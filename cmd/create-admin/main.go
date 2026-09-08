@@ -30,7 +30,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	repo, err := db.NewRepository(ctx, dbCfg.GetDSN())
+	repo, err := db.NewRepository(ctx, dbCfg.GetDSN(), dbCfg.DB.MaxConns)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

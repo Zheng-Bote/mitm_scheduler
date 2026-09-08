@@ -43,6 +43,7 @@ type DBConnectionConfig struct {
 	Database       string `json:"database"`
 	DBConnectDelay int    `json:"db_connect_delay,omitempty"`
 	SSLMode        bool   `json:"sslmode,omitempty"`
+	MaxConns       int    `json:"max_conns,omitempty"`
 }
 
 type DBConfig struct {

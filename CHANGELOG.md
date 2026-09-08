@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Database**: The PostgreSQL connection pool size (`max_conns`) is now exposed and configurable via `config.json` under the `db` block, allowing higher concurrency for collector agents. Defaults to 20 if not specified (Issue #5).
+
 ## [v0.31.0] - 2026-09-08
 
 ### Added

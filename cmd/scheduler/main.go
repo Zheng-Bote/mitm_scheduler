@@ -207,7 +207,7 @@ func main() {
 
 	var repo *db.Repository
 	for {
-		repo, err = db.NewRepository(ctx, dbCfg.GetDSN())
+		repo, err = db.NewRepository(ctx, dbCfg.GetDSN(), dbCfg.DB.MaxConns)
 		if err == nil {
 			log.Println("Successfully connected to database.")
 			break
