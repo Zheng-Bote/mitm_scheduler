@@ -31,7 +31,9 @@ func (s *Server) handleKeyRotation(w http.ResponseWriter, r *http.Request) {
 		Ciphertext string `json:"ciphertext"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&payload); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}

@@ -5,6 +5,12 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **API**: Enforced strict JSON decoding (`DisallowUnknownFields()`) across all HTTP handlers to reject requests containing unknown or undefined payload fields (Issue #4).
+
 ## [v0.31.0] - 2026-09-08
 
 ### Added

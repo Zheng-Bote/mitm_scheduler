@@ -32,7 +32,9 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var m db.MappingSource
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&m); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -93,7 +95,9 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var m db.MappingTargetField
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&m); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -154,7 +158,9 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var m db.MappingRule
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&m); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -215,7 +221,9 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 
 	if r.Method == http.MethodPost {
 		var m db.MappingTransformation
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&m); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -276,7 +284,9 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 
 	if r.Method == http.MethodPost {
 		var m db.MappingValidation
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&m); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -373,7 +383,9 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 		SourceFields []string `json:"source_fields"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -483,7 +495,9 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 
 	if r.Method == http.MethodPost {
 		var td db.TopicDependency
-		if err := json.NewDecoder(r.Body).Decode(&td); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&td); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}

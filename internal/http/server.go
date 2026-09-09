@@ -310,7 +310,9 @@ func (s *Server) handleAdminAction(w http.ResponseWriter, r *http.Request) {
 		Details interface{} `json:"details"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&payload); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -336,7 +338,9 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var jobs []db.ScheduledProgram
-	if err := json.NewDecoder(r.Body).Decode(&jobs); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&jobs); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -797,7 +801,9 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var cred db.SourceCredential
-		if err := json.NewDecoder(r.Body).Decode(&cred); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&cred); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -846,7 +852,9 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var target db.DeliveryTarget
-		if err := json.NewDecoder(r.Body).Decode(&target); err != nil {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&target); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}

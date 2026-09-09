@@ -4,6 +4,8 @@ This document describes the REST API endpoints provided by the Go Scheduler serv
 
 The server's HTTP engine is implemented in the `internal/http` package. The port is dynamically loaded from the database configuration.
 
+> **Note on JSON Payloads**: All API endpoints that accept a JSON request body enforce strict validation. Payloads containing unknown or undefined fields will be rejected with an `HTTP 400 Bad Request` error.
+
 ---
 
 ## 1. API Endpoints Table
