@@ -26,21 +26,21 @@ import (
 // handleGetStorageKeys returns a list of all currently active wrapped keys
 func (s *Server) handleGetStorageKeys(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	_, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	keys, err := s.Repo.GetAllActiveWrappedKeys(r.Context())
 	if err != nil {
 		log.Printf("Failed to get active wrapped keys: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		writeJSONError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 

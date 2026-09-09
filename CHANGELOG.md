@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **API**: Standardized all HTTP error responses to use a structured JSON schema (`{"error": "...", "code": 500}`) across the application instead of plain text (Issue #6).
+
 ### Security
 
 - **API**: Enforced strict JSON decoding (`DisallowUnknownFields()`) across all HTTP handlers to reject requests containing unknown or undefined payload fields (Issue #4).
