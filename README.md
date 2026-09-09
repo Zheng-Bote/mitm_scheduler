@@ -50,7 +50,7 @@
 - **Encrypted Config**: Database credentials and admin tokens are stored in an encrypted JSON file (AES-256-GCM + Argon2id).
 - **Dynamic Reloading**: Jobs can be updated via the API and reloaded without restarting the service.
 - **IPC over Unix Sockets**: Jobs report status events back to the scheduler via JSON-Lines.
-- **Admin API**: Remote job management with authentication, strict JSON validation (`DisallowUnknownFields()`), and RBAC, including automatic `next_run` cron calculations, active job termination (`/admin/stop-job` for `ADMIN` role), and high-performance FlatBuffers binary endpoints (`/admin/*_bin`).
+- **Admin API**: Remote job management with authentication, strict JSON validation (`DisallowUnknownFields()`), structured JSON error responses, and RBAC, including automatic `next_run` cron calculations, active job termination (`/admin/stop-job` for `ADMIN` role), and high-performance FlatBuffers binary endpoints (`/admin/*_bin`).
 - **Configuration Backup & Restore**: Export and import the complete system configuration (jobs, sources, targets, rules) as JSON via API (requires `BACKUP-RESTORE` role).
 - **Enhanced Logging**:
   - `system_logs`: Core scheduler lifecycle events.

@@ -41,6 +41,15 @@ import (
 	"go-scheduler/internal/db"
 )
 
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": message,
+		"code":  statusCode,
+	})
+}
+
 type requestIDKey struct{}
 
 func Recover(next http.Handler) http.Handler {
@@ -87,7 +96,7 @@ func Throttle(max int) func(http.Handler) http.Handler {
 				defer func() { <-sem }()
 				next.ServeHTTP(w, r)
 			default:
-				http.Error(w, "server busy", http.StatusServiceUnavailable)
+				writeJSONError(w, "server busy", http.StatusServiceUnavailable)
 			}
 		})
 	}
@@ -296,12 +305,12 @@ func (s *Server) handleAdminAction(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -313,7 +322,7 @@ func (s *Server) handleAdminAction(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&payload); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -326,14 +335,14 @@ func (s *Server) handleAdminAction(w http.ResponseWriter, r *http.Request) {
 // Requires valid HTTP Basic Auth credentials.
 func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -341,12 +350,12 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&jobs); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if s.Repo == nil {
-		http.Error(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
+		writeJSONError(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -354,14 +363,14 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		if err := s.Repo.UpsertScheduledProgram(ctx, job); err != nil {
 			s.Repo.LogAdminAction(ctx, username, "update_job_fail", map[string]interface{}{"job": job.Name, "error": err.Error()})
-			http.Error(w, fmt.Sprintf("Failed to update job %s: %v", job.Name, err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update job %s: %v", job.Name, err), http.StatusInternalServerError)
 			return
 		}
 	}
 
 	if err := s.Scheduler.Reload(ctx); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "reload_fail", err.Error())
-		http.Error(w, "Failed to reload scheduler", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to reload scheduler", http.StatusInternalServerError)
 		return
 	}
 
@@ -374,25 +383,25 @@ func (s *Server) handleUpdateJobs(w http.ResponseWriter, r *http.Request) {
 // valid HTTP Basic Auth credentials.
 func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if s.Repo == nil {
-		http.Error(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
+		writeJSONError(w, "Service Unavailable: Database connection missing", http.StatusServiceUnavailable)
 		return
 	}
 
 	jobs, err := s.Repo.GetAllPrograms(r.Context())
 	if err != nil {
-		http.Error(w, "Failed to fetch jobs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to fetch jobs", http.StatusInternalServerError)
 		return
 	}
 
@@ -438,27 +447,27 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 // Requires valid HTTP Basic Auth credentials.
 func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	name := r.URL.Query().Get("name")
 	if name == "" {
-		http.Error(w, "Missing job name", http.StatusBadRequest)
+		writeJSONError(w, "Missing job name", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
 	_, err := s.Repo.Pool.Exec(ctx, "DELETE FROM scheduled_programs WHERE name = $1", name)
 	if err != nil {
-		http.Error(w, "Failed to delete job", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to delete job", http.StatusInternalServerError)
 		return
 	}
 
@@ -472,14 +481,14 @@ func (s *Server) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 // Requires valid HTTP Basic Auth credentials.
 func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -504,20 +513,20 @@ func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
 	}
 	if !isAdmin {
 		s.Repo.LogAdminAction(r.Context(), username, "stop_job_forbidden", map[string]string{"name": r.URL.Query().Get("name")})
-		http.Error(w, "Forbidden: ADMIN role required to stop jobs", http.StatusForbidden)
+		writeJSONError(w, "Forbidden: ADMIN role required to stop jobs", http.StatusForbidden)
 		return
 	}
 
 	name := r.URL.Query().Get("name")
 	if name == "" {
-		http.Error(w, "Missing job name", http.StatusBadRequest)
+		writeJSONError(w, "Missing job name", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
 	if err := s.Scheduler.StopJobByName(name); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "stop_job_fail", map[string]string{"name": name, "error": err.Error()})
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -530,20 +539,20 @@ func (s *Server) handleStopJob(w http.ResponseWriter, r *http.Request) {
 // Requires valid HTTP Basic Auth credentials.
 func (s *Server) handleExecuteJob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	name := r.URL.Query().Get("name")
 	if name == "" {
-		http.Error(w, "Missing job name", http.StatusBadRequest)
+		writeJSONError(w, "Missing job name", http.StatusBadRequest)
 		return
 	}
 
@@ -551,9 +560,9 @@ func (s *Server) handleExecuteJob(w http.ResponseWriter, r *http.Request) {
 	if err := s.Scheduler.RunJobByName(ctx, name); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "execute_job_fail", map[string]string{"name": name, "error": err.Error()})
 		if strings.Contains(err.Error(), "not found") {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			writeJSONError(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, "Failed to execute job", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to execute job", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -630,26 +639,26 @@ func parseDateParam(val string) (*time.Time, error) {
 // and streams them as a JSON file download.
 func (s *Server) handleDownloadSystemLogs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -660,7 +669,7 @@ func (s *Server) handleDownloadSystemLogs(w http.ResponseWriter, r *http.Request
 	logs, err := s.Repo.GetSystemLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_system_logs_fail", err.Error())
-		http.Error(w, "Failed to retrieve system logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve system logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -679,26 +688,26 @@ func (s *Server) handleDownloadSystemLogs(w http.ResponseWriter, r *http.Request
 // and streams them as a JSON file download.
 func (s *Server) handleDownloadJobAuditLogs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -709,7 +718,7 @@ func (s *Server) handleDownloadJobAuditLogs(w http.ResponseWriter, r *http.Reque
 	logs, err := s.Repo.GetJobAuditLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_job_audit_logs_fail", err.Error())
-		http.Error(w, "Failed to retrieve job audit logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve job audit logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -728,26 +737,26 @@ func (s *Server) handleDownloadJobAuditLogs(w http.ResponseWriter, r *http.Reque
 // and streams them as a JSON file download.
 func (s *Server) handleDownloadAdminAuditLogs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -758,7 +767,7 @@ func (s *Server) handleDownloadAdminAuditLogs(w http.ResponseWriter, r *http.Req
 	logs, err := s.Repo.GetAdminAuditLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_admin_audit_logs_fail", err.Error())
-		http.Error(w, "Failed to retrieve admin audit logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve admin audit logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -778,7 +787,7 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -786,7 +795,7 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 		creds, err := s.Repo.GetSourceCredentials(r.Context())
 		if err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "get_credentials_fail", err.Error())
-			http.Error(w, "Failed to fetch source credentials", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch source credentials", http.StatusInternalServerError)
 			return
 		}
 
@@ -804,14 +813,14 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&cred); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 
 		if err := s.Repo.UpsertSourceCredential(r.Context(), cred); err != nil {
 			fmt.Printf("[HTTP ERROR] Failed to upsert credential '%s': %v\n", cred.SourceName, err)
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_credential_fail", map[string]interface{}{"source": cred.SourceName, "error": err.Error()})
-			http.Error(w, fmt.Sprintf("Failed to update credential %s: %v", cred.SourceName, err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update credential %s: %v", cred.SourceName, err), http.StatusInternalServerError)
 			return
 		}
 
@@ -821,7 +830,7 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 // handleDeliveryTargets returns or updates delivery targets. Requires valid HTTP Basic Auth.
@@ -829,7 +838,7 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -837,7 +846,7 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 		targets, err := s.Repo.GetDeliveryTargets(r.Context())
 		if err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "get_delivery_targets_fail", err.Error())
-			http.Error(w, "Failed to fetch delivery targets", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch delivery targets", http.StatusInternalServerError)
 			return
 		}
 
@@ -855,14 +864,14 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&target); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 
 		if err := s.Repo.UpsertDeliveryTarget(r.Context(), target); err != nil {
 			fmt.Printf("[HTTP ERROR] Failed to upsert delivery target '%s': %v\n", target.Topic, err)
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_delivery_target_fail", map[string]interface{}{"topic": target.Topic, "error": err.Error()})
-			http.Error(w, fmt.Sprintf("Failed to update delivery target %s: %v", target.Topic, err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update delivery target %s: %v", target.Topic, err), http.StatusInternalServerError)
 			return
 		}
 
@@ -875,12 +884,12 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing id", http.StatusBadRequest)
+			writeJSONError(w, "Missing id", http.StatusBadRequest)
 			return
 		}
 
 		if err := s.Repo.DeleteDeliveryTarget(r.Context(), id); err != nil {
-			http.Error(w, "Failed to delete target", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to delete target", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -888,19 +897,19 @@ func (s *Server) handleDeliveryTargets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 // handleDLQ handles GET requests for dead letter queue entries
 func (s *Server) handleDLQ(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	_ = username
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -921,14 +930,14 @@ func (s *Server) handleDLQ(w http.ResponseWriter, r *http.Request) {
 // handleDLQRequeue handles POST requests to requeue specified DLQ entries
 func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -938,7 +947,7 @@ func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
 		if idParam := r.URL.Query().Get("id"); idParam != "" {
 			ids = strings.Split(idParam, ",")
 		} else {
-			http.Error(w, "Missing id parameter", http.StatusBadRequest)
+			writeJSONError(w, "Missing id parameter", http.StatusBadRequest)
 			return
 		}
 	}
@@ -946,7 +955,7 @@ func (s *Server) handleDLQRequeue(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := s.Repo.RequeueDLQEntries(ctx, ids); err != nil {
 		s.Repo.LogAdminAction(ctx, username, "dlq_requeue_fail", map[string]interface{}{"ids": ids, "error": err.Error()})
-		http.Error(w, fmt.Sprintf("Failed to requeue DLQ entries: %v", err), http.StatusInternalServerError)
+		writeJSONError(w, fmt.Sprintf("Failed to requeue DLQ entries: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -960,7 +969,7 @@ func (s *Server) handleDashboardStats(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	_ = username
@@ -968,7 +977,7 @@ func (s *Server) handleDashboardStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := s.Repo.GetDashboardStats(r.Context())
 	if err != nil {
 		s.Repo.LogSystem(r.Context(), "ERROR", "HTTP", "Dashboard stats failed: "+err.Error())
-		http.Error(w, "Failed to get dashboard stats", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to get dashboard stats", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

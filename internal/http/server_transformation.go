@@ -15,14 +15,14 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetMappingSources(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch mapping sources", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch mapping sources", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -35,7 +35,7 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&m); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if m.ID == "" {
@@ -46,7 +46,7 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.Repo.UpsertMappingSource(r.Context(), m); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_mapping_source_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update mapping source: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update mapping source: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_mapping_source_success", map[string]interface{}{"id": m.ID})
@@ -58,12 +58,12 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			writeJSONError(w, "Missing ID", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteMappingSource(r.Context(), id); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_mapping_source_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_mapping_source_success", map[string]interface{}{"id": id})
@@ -71,21 +71,21 @@ func (s *Server) handleMappingSources(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetMappingTargetFields(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch target fields", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch target fields", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -98,7 +98,7 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&m); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if m.ID == "" {
@@ -109,7 +109,7 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.Repo.UpsertMappingTargetField(r.Context(), m); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_target_field_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update target field: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update target field: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_target_field_success", map[string]interface{}{"id": m.ID})
@@ -121,12 +121,12 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			writeJSONError(w, "Missing ID", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteMappingTargetField(r.Context(), id); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_target_field_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_target_field_success", map[string]interface{}{"id": id})
@@ -134,21 +134,21 @@ func (s *Server) handleMappingTargets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetMappingRules(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch rules", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch rules", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -161,7 +161,7 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&m); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if m.ID == "" {
@@ -172,7 +172,7 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.Repo.UpsertMappingRule(r.Context(), m); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_rule_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update rule: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update rule: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_rule_success", map[string]interface{}{"id": m.ID})
@@ -184,12 +184,12 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			writeJSONError(w, "Missing ID", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteMappingRule(r.Context(), id); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_rule_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_rule_success", map[string]interface{}{"id": id})
@@ -197,21 +197,21 @@ func (s *Server) handleMappingRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetMappingTransformations(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch transformations", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch transformations", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -224,7 +224,7 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&m); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if m.ID == "" {
@@ -235,7 +235,7 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 		}
 		if err := s.Repo.UpsertMappingTransformation(r.Context(), m); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_transformation_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update transformation: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update transformation: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_transformation_success", map[string]interface{}{"id": m.ID})
@@ -247,12 +247,12 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			writeJSONError(w, "Missing ID", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteMappingTransformation(r.Context(), id); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_transformation_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_transformation_success", map[string]interface{}{"id": id})
@@ -260,21 +260,21 @@ func (s *Server) handleMappingTransformations(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetMappingValidations(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch validations", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch validations", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -287,7 +287,7 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&m); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if m.ID == "" {
@@ -298,7 +298,7 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 		}
 		if err := s.Repo.UpsertMappingValidation(r.Context(), m); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_validation_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update validation: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update validation: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_validation_success", map[string]interface{}{"id": m.ID})
@@ -310,12 +310,12 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 	if r.Method == http.MethodDelete {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			writeJSONError(w, "Missing ID", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteMappingValidation(r.Context(), id); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_validation_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_validation_success", map[string]interface{}{"id": id})
@@ -323,7 +323,7 @@ func (s *Server) handleMappingValidations(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 // levenshtein computes the Levenshtein distance between two strings
@@ -369,12 +369,12 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -386,18 +386,18 @@ func (s *Server) handleAutoMap(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if req.SourceID == "" || len(req.SourceFields) == 0 {
-		http.Error(w, "Missing source_id or source_fields", http.StatusBadRequest)
+		writeJSONError(w, "Missing source_id or source_fields", http.StatusBadRequest)
 		return
 	}
 
 	targets, err := s.Repo.GetMappingTargetFields(r.Context())
 	if err != nil {
-		http.Error(w, "Failed to fetch targets", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to fetch targets", http.StatusInternalServerError)
 		return
 	}
 
@@ -451,18 +451,18 @@ func (s *Server) handleTransformationErrors(w http.ResponseWriter, r *http.Reque
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	res, err := s.Repo.GetTransformationErrors(r.Context(), 500)
 	if err != nil {
-		http.Error(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
 		return
 	}
 
@@ -478,14 +478,14 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		res, err := s.Repo.GetTopicDependencies(r.Context())
 		if err != nil {
-			http.Error(w, "Failed to fetch topic dependencies", http.StatusInternalServerError)
+			writeJSONError(w, "Failed to fetch topic dependencies", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -498,11 +498,11 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&td); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
 		if td.Topic == "" {
-			http.Error(w, "Missing Topic", http.StatusBadRequest)
+			writeJSONError(w, "Missing Topic", http.StatusBadRequest)
 			return
 		}
 		if td.RequiredSources == nil {
@@ -510,7 +510,7 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 		}
 		if err := s.Repo.UpsertTopicDependency(r.Context(), td); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "upsert_topic_dependency_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to update topic dependency: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to update topic dependency: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "upsert_topic_dependency_success", map[string]interface{}{"topic": td.Topic})
@@ -522,12 +522,12 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 	if r.Method == http.MethodDelete {
 		topic := r.URL.Query().Get("topic")
 		if topic == "" {
-			http.Error(w, "Missing Topic", http.StatusBadRequest)
+			writeJSONError(w, "Missing Topic", http.StatusBadRequest)
 			return
 		}
 		if err := s.Repo.DeleteTopicDependency(r.Context(), topic); err != nil {
 			s.Repo.LogAdminAction(r.Context(), username, "delete_topic_dependency_fail", err.Error())
-			http.Error(w, fmt.Sprintf("Failed to delete topic dependency: %v", err), http.StatusInternalServerError)
+			writeJSONError(w, fmt.Sprintf("Failed to delete topic dependency: %v", err), http.StatusInternalServerError)
 			return
 		}
 		s.Repo.LogAdminAction(r.Context(), username, "delete_topic_dependency_success", map[string]interface{}{"topic": topic})
@@ -535,5 +535,5 @@ func (s *Server) handleTopicDependencies(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }

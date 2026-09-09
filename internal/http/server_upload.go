@@ -14,19 +14,19 @@ import (
 func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 	adminUser, ok := s.authenticate(r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Verify user has UPLOADER or ADMIN role
 	roleNames, err := s.Repo.GetUserRolesByUsername(r.Context(), adminUser, s.KEK)
 	if err != nil {
-		http.Error(w, "Error fetching user roles", http.StatusInternalServerError)
+		writeJSONError(w, "Error fetching user roles", http.StatusInternalServerError)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isUploader {
-		http.Error(w, "Forbidden: UPLOADER role required", http.StatusForbidden)
+		writeJSONError(w, "Forbidden: UPLOADER role required", http.StatusForbidden)
 		return
 	}
 
@@ -47,31 +47,31 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 	// 32 MB max memory
 	err = r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		http.Error(w, "Error parsing form: "+err.Error(), http.StatusBadRequest)
+		writeJSONError(w, "Error parsing form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	topic := r.FormValue("topic")
 	if topic == "" {
-		http.Error(w, "Missing 'topic' form field", http.StatusBadRequest)
+		writeJSONError(w, "Missing 'topic' form field", http.StatusBadRequest)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Error retrieving file: "+err.Error(), http.StatusBadRequest)
+		writeJSONError(w, "Error retrieving file: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	if s.UploadDir == "" {
-		http.Error(w, "Upload directory not configured on server", http.StatusInternalServerError)
+		writeJSONError(w, "Upload directory not configured on server", http.StatusInternalServerError)
 		return
 	}
 
 	// Ensure upload directory exists
 	if err := os.MkdirAll(s.UploadDir, os.ModePerm); err != nil {
-		http.Error(w, "Failed to create upload directory", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to create upload directory", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,13 +79,13 @@ func (s *Server) handleUploadFile(w http.ResponseWriter, r *http.Request) {
 	destPath := filepath.Join(s.UploadDir, fmt.Sprintf("%d_%s", time.Now().UnixNano(), header.Filename))
 	destFile, err := os.Create(destPath)
 	if err != nil {
-		http.Error(w, "Failed to create file on disk", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to create file on disk", http.StatusInternalServerError)
 		return
 	}
 	defer destFile.Close()
 
 	if _, err := io.Copy(destFile, file); err != nil {
-		http.Error(w, "Failed to save file content", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to save file content", http.StatusInternalServerError)
 		return
 	}
 

@@ -10,7 +10,7 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	
@@ -23,7 +23,7 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil || !hasRole {
-		http.Error(w, "Forbidden: Missing BACKUP-RESTORE role", http.StatusForbidden)
+		writeJSONError(w, "Forbidden: Missing BACKUP-RESTORE role", http.StatusForbidden)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 	for _, t := range tables {
 		data, err := s.Repo.ExportConfigTable(r.Context(), t)
 		if err != nil {
-			http.Error(w, "Failed to export table "+t+": "+err.Error(), http.StatusInternalServerError)
+			writeJSONError(w, "Failed to export table "+t+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		payload.Data[t] = data
@@ -69,7 +69,7 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil || !hasRole {
-		http.Error(w, "Forbidden: Missing BACKUP-RESTORE role", http.StatusForbidden)
+		writeJSONError(w, "Forbidden: Missing BACKUP-RESTORE role", http.StatusForbidden)
 		return
 	}
 
@@ -95,12 +95,12 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&payload); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		writeJSONError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if payload.Version != s.AppVersion {
-		http.Error(w, "Version mismatch: cannot restore backup from version "+payload.Version, http.StatusBadRequest)
+		writeJSONError(w, "Version mismatch: cannot restore backup from version "+payload.Version, http.StatusBadRequest)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 	for _, t := range tables {
 		if data, ok := backupData[t]; ok {
 			if err := s.Repo.ImportConfigTable(r.Context(), t, data); err != nil {
-				http.Error(w, "Failed to restore table "+t+": "+err.Error(), http.StatusInternalServerError)
+				writeJSONError(w, "Failed to restore table "+t+": "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		}

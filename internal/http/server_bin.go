@@ -31,12 +31,12 @@ import (
 func (s *Server) handleDLQBin(w http.ResponseWriter, r *http.Request) {
 	username, ok := s.authenticate(r)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	_ = username
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -117,26 +117,26 @@ func (s *Server) handleDLQBin(w http.ResponseWriter, r *http.Request) {
 // and streams them as a FlatBuffers binary file download.
 func (s *Server) handleDownloadSystemLogsBin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (s *Server) handleDownloadSystemLogsBin(w http.ResponseWriter, r *http.Requ
 	logs, err := s.Repo.GetSystemLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_system_logs_bin_fail", err.Error())
-		http.Error(w, "Failed to retrieve system logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve system logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -197,26 +197,26 @@ func (s *Server) handleDownloadSystemLogsBin(w http.ResponseWriter, r *http.Requ
 // and streams them as a FlatBuffers binary file download.
 func (s *Server) handleDownloadJobAuditLogsBin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -227,7 +227,7 @@ func (s *Server) handleDownloadJobAuditLogsBin(w http.ResponseWriter, r *http.Re
 	logs, err := s.Repo.GetJobAuditLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_job_audit_logs_bin_fail", err.Error())
-		http.Error(w, "Failed to retrieve job audit logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve job audit logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -276,26 +276,26 @@ func (s *Server) handleDownloadJobAuditLogsBin(w http.ResponseWriter, r *http.Re
 // and streams them as a FlatBuffers binary file download.
 func (s *Server) handleDownloadAdminAuditLogsBin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	from, err := parseDateParam(r.URL.Query().Get("from"))
 	if err != nil {
-		http.Error(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'from' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
 	to, err := parseDateParam(r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
+		writeJSONError(w, "Invalid 'to' parameter. Use RFC3339 or YYYY-MM-DD", http.StatusBadRequest)
 		return
 	}
 
@@ -306,7 +306,7 @@ func (s *Server) handleDownloadAdminAuditLogsBin(w http.ResponseWriter, r *http.
 	logs, err := s.Repo.GetAdminAuditLogs(r.Context(), from, to)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "download_admin_audit_logs_bin_fail", err.Error())
-		http.Error(w, "Failed to retrieve admin audit logs", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to retrieve admin audit logs", http.StatusInternalServerError)
 		return
 	}
 
@@ -357,18 +357,18 @@ func (s *Server) handleTransformationErrorsBin(w http.ResponseWriter, r *http.Re
 	username, ok := s.authenticate(r)
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Admin API"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	res, err := s.Repo.GetTransformationErrors(r.Context(), 500)
 	if err != nil {
-		http.Error(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to fetch transformation errors", http.StatusInternalServerError)
 		return
 	}
 
