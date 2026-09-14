@@ -95,6 +95,7 @@ func LoadConfig() (*DBConfig, error) {
 	dbConfig.DB.Password = getEnvStr("MITM_DB_PASSWORD", "")
 	dbConfig.DB.Database = getEnvStr("MITM_DB_NAME", "")
 	dbConfig.DB.DBConnectDelay = getEnvInt("MITM_DB_CONNECT_DELAY", 5)
+	dbConfig.DB.MaxConns = getEnvInt("MITM_DB_MAX_CONNS", 20)
 	
 	sslModeStr := strings.ToLower(getEnvStr("MITM_DB_SSLMODE", ""))
 	if sslModeStr == "require" || sslModeStr == "true" || sslModeStr == "1" || sslModeStr == "yes" {

@@ -124,9 +124,14 @@ The Scheduler is configured entirely via environment variables.
 | `MITM_DB_PASSWORD` | PostgreSQL Password (Required) | - |
 | `MITM_DB_NAME` | PostgreSQL Database Name | - |
 | `MITM_DB_SSLMODE` | Enable SSL (`require` or `disable`) | `disable` |
+| `MITM_DB_CONNECT_DELAY` | Initial delay in seconds before DB connect | `5` |
+| `MITM_DB_MAX_CONNS` | Max DB connections in pool | `20` |
 | `MITM_LOG_LEVEL` | Log Level (`DEBUG`, `INFO`, `WARN`, `ERROR`) | `INFO` |
 | `MITM_UPLOAD_DIR` | Path to file uploads | `<binary_dir>/mitm_uploads` |
 | `MITM_HTTP_PORT` | REST API Port | `8080` |
+| `MITM_USE_HTTPS` | Enable HTTPS server | `false` |
+| `MITM_SSL_CERT` | Path to SSL certificate | `<binary_dir>/certs/server.crt` |
+| `MITM_SSL_KEY` | Path to SSL private key | `<binary_dir>/certs/server.key` |
 | `MITM_ADMINS` | Comma-separated list of admin usernames | - |
 
 ## Running the Scheduler
