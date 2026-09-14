@@ -5,6 +5,18 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.33.0] - 2026-09-14
+
+### Changed
+
+- **Configuration**: Migrated from encrypted `config.enc` files to standard environment variables (`MITM_DB_HOST`, `MITM_DB_USER`, `MITM_LOG_LEVEL`, etc.) to support seamless AWS deployment and secrets management (Issue #9).
+- **Configuration**: `upload_dir` and `certs` paths now dynamically default to the binary's directory if not explicitly provided via ENVs (Issue #9).
+- **Tools**: `create-admin` CLI now loads PostgreSQL connections via ENVs and uses the `MASTER_KEY` directly, removing the need for a separate password (Issue #9).
+
+### Removed
+
+- **Tools**: Removed the `encrypt-config` CLI tool, as the file-based encrypted configuration is obsolete (Issue #9).
+
 ## [v0.32.0] - 2026-09-09
 
 ### Added

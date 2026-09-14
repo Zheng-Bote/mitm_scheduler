@@ -22,11 +22,11 @@ package db
 
 import (
 	"context"
-	"regexp"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -76,7 +76,7 @@ func NewRepository(ctx context.Context, dsn string, maxConns int) (*Repository, 
 	config_pool, err := pgxpool.ParseConfig(dsn)
 	if err == nil {
 		if maxConns <= 0 {
-			maxConns = 20
+			maxConns = 50
 		}
 		config_pool.MaxConns = int32(maxConns)
 		config_pool.MaxConnIdleTime = 5 * time.Minute
@@ -563,7 +563,7 @@ type DashboardStats struct {
 
 func (r *Repository) GetDashboardStats(ctx context.Context) (*DashboardStats, error) {
 	stats := &DashboardStats{}
-	
+
 	// Get DB info
 	err := r.Pool.QueryRow(ctx, `
 		SELECT current_database(), version(), pg_size_pretty(pg_database_size(current_database()))

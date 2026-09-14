@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"go-scheduler/internal/config"
 	"go-scheduler/internal/crypto"
@@ -14,19 +15,21 @@ import (
 )
 
 func main() {
-	var configPath = flag.String("config", "", "Path to encrypted config.json")
-	var password = flag.String("password", "", "Decryption password for config")
 	var newAdminUser = flag.String("user", "admin", "Username of the new admin")
 	var newAdminPass = flag.String("pass", "admin123", "Password for the new admin")
+	var kekStr = flag.String("kek", "", "Master Key (KEK) to encrypt role assignments")
 	flag.Parse()
 
-	if *configPath == "" || *password == "" {
-		log.Fatal("Usage: create-admin -config <config.json> -password <password> [-user admin] [-pass admin123]")
+	if *kekStr == "" {
+		*kekStr = os.Getenv("MASTER_KEY")
+		if *kekStr == "" {
+			log.Fatal("Usage: create-admin [-user admin] [-pass admin123] -kek <master_key>")
+		}
 	}
 
-	dbCfg, err := config.LoadEncryptedConfig(*configPath, *password)
+	dbCfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("Failed to load config from environment: %v", err)
 	}
 
 	ctx := context.Background()
@@ -61,8 +64,8 @@ func main() {
 	}
 
 	// Also assign the ADMIN role
-	// KEK is the password used to decrypt config
-	kek := []byte(*password)
+	// KEK is the MASTER_KEY
+	kek := []byte(*kekStr)
 
 	// Get ADMIN role ID
 	var roleID int

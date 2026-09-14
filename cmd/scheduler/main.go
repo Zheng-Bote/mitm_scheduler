@@ -24,7 +24,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -144,41 +143,16 @@ func main() {
 	}
 	version = strings.Split(version, "-")[0]
 
-	var configPath string
-	if len(os.Args) < 2 {
-		execPath, err := os.Executable()
-		if err == nil {
-			execDir := filepath.Dir(execPath)
-			if _, err := os.Stat(filepath.Join(execDir, "config.json")); err == nil {
-				configPath = filepath.Join(execDir, "config.json")
-			} else if _, err := os.Stat(filepath.Join(execDir, "config.enc")); err == nil {
-				configPath = filepath.Join(execDir, "config.enc")
-			}
-		}
-		if configPath == "" {
-			fmt.Println("Usage: scheduler <path/to/encrypted/config.json>")
-			fmt.Println("Alternatively, place config.json or config.enc in the same directory as the executable.")
-			os.Exit(1)
-		}
-	} else {
-		configPath = os.Args[1]
-	}
-
 	if os.Getenv("MASTER_KEY") == "" {
 		log.Fatal("MASTER_KEY environment variable is required")
 	}
 
-	// 1. Get Password
-	password := os.Getenv("SCHEDULER_PASSWORD")
-	if password == "" {
-		log.Fatal("SCHEDULER_PASSWORD environment variable is required")
+	// Load Config from Environment Variables
+	dbCfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config from environment: %v", err)
 	}
 
-	// 2. Load Config
-	dbCfg, err := config.LoadEncryptedConfig(configPath, password)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
 
 	// 3. Prepare early startup configuration
 	var schedCfg *db.SchedulerConfig = &db.SchedulerConfig{
@@ -232,7 +206,7 @@ func main() {
 		SSLCert:        dbCfg.SSLCert,
 		SSLKey:         dbCfg.SSLKey,
 		Admins:         dbCfg.Admins,
-		KEK:            []byte(password),
+		KEK:            []byte(os.Getenv("MASTER_KEY")),
 		UploadDir:      dbCfg.UploadDir,
 		Scheduler:      sched,
 		AppName:        appName,
@@ -249,7 +223,7 @@ func main() {
 	log.Printf("%s Server listening on port %d", protocol, schedCfg.HTTPPort)
 
 	// Bootstrap admins from config
-	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(password))
+	bootstrapAdmins(ctx, repo, dbCfg.Admins, []byte(os.Getenv("MASTER_KEY")))
 
 	// Load Scheduler Config from DB
 	dbSchedCfg, err := repo.GetSchedulerConfig(ctx)
