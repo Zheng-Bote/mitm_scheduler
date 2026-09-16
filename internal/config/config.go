@@ -108,7 +108,7 @@ func LoadConfig() (*DBConfig, error) {
 	dbConfig.UploadDir = getEnvStr("MITM_UPLOAD_DIR", filepath.Join(exeDir, "mitm_uploads"))
 	dbConfig.HTTPPort = getEnvInt("MITM_HTTP_PORT", 8080)
 	dbConfig.UseHTTPS = getEnvBool("MITM_USE_HTTPS", false)
-	dbConfig.SSLCert = getEnvStr("MITM_SSL_CERT", filepath.Join(exeDir, "certs", "server.crt"))
+	dbConfig.SSLCert = getEnvStr("MITM_SSL_CERT", getEnvStr("MITM_SSL_CRT", filepath.Join(exeDir, "certs", "server.crt")))
 	dbConfig.SSLKey = getEnvStr("MITM_SSL_KEY", filepath.Join(exeDir, "certs", "server.key"))
 
 	adminsStr := getEnvStr("MITM_ADMINS", "")
