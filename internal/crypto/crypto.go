@@ -268,7 +268,7 @@ func WrapDEK(dek, kek []byte) ([]byte, error) {
 		return nil, err
 	}
 	wrappedCipher := kekGCM.Seal(nil, dekNonce, dek, nil)
-	
+
 	wrappedKey := make([]byte, len(dekNonce)+len(wrappedCipher))
 	copy(wrappedKey, dekNonce)
 	copy(wrappedKey[len(dekNonce):], wrappedCipher)

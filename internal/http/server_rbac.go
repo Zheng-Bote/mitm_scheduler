@@ -6,7 +6,6 @@ import (
 	"strconv"
 )
 
-
 func (s *Server) requireAdmin(w http.ResponseWriter, r *http.Request) (string, bool) {
 	username, ok := s.authenticate(r)
 	if !ok {

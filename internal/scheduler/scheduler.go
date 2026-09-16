@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -354,7 +354,7 @@ func (s *Scheduler) StopJobByName(name string) error {
 // Pause stops new cron executions and waits for active jobs to finish
 func (s *Scheduler) Pause(ctx context.Context) {
 	s.Cron.Stop()
-	
+
 	done := make(chan struct{})
 	go func() {
 		s.wg.Wait()

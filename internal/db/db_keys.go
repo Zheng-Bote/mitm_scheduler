@@ -23,7 +23,7 @@ import (
 	"fmt"
 )
 
-// GetAllActiveWrappedKeys retrieves all unique wrapped_keys from storage_keys 
+// GetAllActiveWrappedKeys retrieves all unique wrapped_keys from storage_keys
 // and wrapped_dek from user_roles_encrypted.
 func (r *Repository) GetAllActiveWrappedKeys(ctx context.Context) ([]string, error) {
 	var keys []string

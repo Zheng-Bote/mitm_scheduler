@@ -66,7 +66,7 @@ func (s *Server) Start() error {
 
 	// Set permissions for the socket
 	_ = os.Chmod(s.SocketPath, 0600)
-	
+
 	sem := make(chan struct{}, 100) // connection limit
 
 	go func() {
@@ -92,7 +92,7 @@ func (s *Server) Start() error {
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	
+
 	lr := io.LimitReader(conn, 64*1024) // 64KB limit
 	scanner := bufio.NewScanner(lr)
 	for scanner.Scan() {

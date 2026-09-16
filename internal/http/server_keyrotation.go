@@ -57,7 +57,7 @@ func (s *Server) handleKeyRotation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, "Internal crypto error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	newMasterKey, err := kekGCM.Open(nil, nonceBytes, cipherBytes, nil)
 	if err != nil {
 		s.Repo.LogAdminAction(r.Context(), username, "key_rotation_fail", map[string]string{"error": "decryption failed"})
@@ -137,7 +137,7 @@ func (s *Server) handleKeyRotation(w http.ResponseWriter, r *http.Request) {
 	// 6. Update the Scheduler's MASTER_KEY in memory
 	s.KEK = newMasterKey
 	s.Repo.LogAdminAction(ctx, username, "key_rotation_success", map[string]interface{}{"count": len(records)})
-	
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Key rotation successful"))
 }
