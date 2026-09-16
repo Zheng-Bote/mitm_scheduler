@@ -18,11 +18,15 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"go-scheduler/internal/crypto"
 )
 
 // AdminUser defines a simple administrative user for API access
@@ -77,8 +81,32 @@ func getEnvBool(key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-// LoadConfig reads configuration from standard environment variables
-func LoadConfig() (*DBConfig, error) {
+// LoadEncryptedConfig reads an encrypted JSON file and decrypts it into DBConfig
+func LoadEncryptedConfig(filePath string, password string) (*DBConfig, error) {
+	encryptedData, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read encrypted config file: %w", err)
+	}
+
+	decryptedData, err := crypto.Decrypt(encryptedData, []byte(password))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt config: %w", err)
+	}
+
+	var dbConfig DBConfig
+	if err := json.Unmarshal(decryptedData, &dbConfig); err != nil {
+		return nil, fmt.Errorf("failed to parse decrypted config JSON: %w", err)
+	}
+
+	return &dbConfig, nil
+}
+
+// LoadConfig resolves configuration following precedence rules:
+// 1. Commandline Parameter (if provided)
+// 2. ENV variables (if present)
+// 3. Default config files (<binary>/config.enc or <binary>/cfg/config.enc)
+// 4. Internal defaults
+func LoadConfig(cliParam string, password string) (*DBConfig, error) {
 	exePath, err := os.Executable()
 	var exeDir string
 	if err == nil {
@@ -87,27 +115,75 @@ func LoadConfig() (*DBConfig, error) {
 		exeDir = "."
 	}
 
+	var cfg *DBConfig
+
+	// 1. Try Commandline parameter
+	if cliParam != "" {
+		cfg, err = LoadEncryptedConfig(cliParam, password)
+		if err == nil {
+			log.Printf("Loaded config from parameter: %s", cliParam)
+			return applyCertificateFallback(cfg, exeDir), nil
+		}
+		log.Printf("Warning: Failed to load config from parameter %s: %v. Falling back to ENVs.", cliParam, err)
+	}
+
+	// 2. Try ENVs if required ENV (MITM_DB_HOST) is present
+	if cfg == nil && getEnvStr("MITM_DB_HOST", "") != "" {
+		cfg = loadFromEnv(exeDir)
+		log.Println("Loaded config from Environment Variables.")
+		return applyCertificateFallback(cfg, exeDir), nil
+	}
+
+	// 3. Try Default files
+	if cfg == nil {
+		defaultPath := filepath.Join(exeDir, "config.enc")
+		cfg, err = LoadEncryptedConfig(defaultPath, password)
+		if err == nil {
+			log.Printf("Loaded config from default path: %s", defaultPath)
+			return applyCertificateFallback(cfg, exeDir), nil
+		}
+
+		fallbackPath := filepath.Join(exeDir, "cfg", "config.enc")
+		cfg, err = LoadEncryptedConfig(fallbackPath, password)
+		if err == nil {
+			log.Printf("Loaded config from fallback path: %s", fallbackPath)
+			return applyCertificateFallback(cfg, exeDir), nil
+		}
+	}
+
+	// 4. Fallback to internal defaults
+	if cfg == nil {
+		log.Println("Warning: No config file or ENVs found. Falling back to internal defaults.")
+		cfg = applyInternalDefaults(exeDir)
+	}
+
+	return applyCertificateFallback(cfg, exeDir), nil
+}
+
+func loadFromEnv(exeDir string) *DBConfig {
 	var dbConfig DBConfig
-	
+
 	dbConfig.DB.Host = getEnvStr("MITM_DB_HOST", "")
 	dbConfig.DB.Port = getEnvInt("MITM_DB_PORT", 5432)
 	dbConfig.DB.User = getEnvStr("MITM_DB_USER", "")
 	dbConfig.DB.Password = getEnvStr("MITM_DB_PASSWORD", "")
 	dbConfig.DB.Database = getEnvStr("MITM_DB_NAME", "")
 	dbConfig.DB.DBConnectDelay = getEnvInt("MITM_DB_CONNECT_DELAY", 5)
-	dbConfig.DB.MaxConns = getEnvInt("MITM_DB_MAX_CONNS", 20)
-	
+	dbConfig.DB.MaxConns = getEnvInt("MITM_DB_MAX_CONNS", 50)
+
 	sslModeStr := strings.ToLower(getEnvStr("MITM_DB_SSLMODE", ""))
-	if sslModeStr == "require" || sslModeStr == "true" || sslModeStr == "1" || sslModeStr == "yes" {
+	if sslModeStr == "disable" || sslModeStr == "false" || sslModeStr == "0" || sslModeStr == "no" {
+		dbConfig.DB.SSLMode = false
+	} else if sslModeStr == "require" || sslModeStr == "true" || sslModeStr == "1" || sslModeStr == "yes" {
 		dbConfig.DB.SSLMode = true
 	} else {
-		dbConfig.DB.SSLMode = getEnvBool("MITM_DB_SSL", false)
+		dbConfig.DB.SSLMode = getEnvBool("MITM_DB_SSL", true)
 	}
-	
+
 	dbConfig.LogLevel = getEnvStr("MITM_LOG_LEVEL", "INFO")
 	dbConfig.UploadDir = getEnvStr("MITM_UPLOAD_DIR", filepath.Join(exeDir, "mitm_uploads"))
-	dbConfig.HTTPPort = getEnvInt("MITM_HTTP_PORT", 8080)
-	dbConfig.UseHTTPS = getEnvBool("MITM_USE_HTTPS", false)
+	dbConfig.HTTPPort = getEnvInt("MITM_HTTP_PORT", 8443)
+	dbConfig.UseHTTPS = getEnvBool("MITM_USE_HTTPS", true)
 	dbConfig.SSLCert = getEnvStr("MITM_SSL_CERT", getEnvStr("MITM_SSL_CRT", filepath.Join(exeDir, "certs", "server.crt")))
 	dbConfig.SSLKey = getEnvStr("MITM_SSL_KEY", filepath.Join(exeDir, "certs", "server.key"))
 
@@ -124,11 +200,66 @@ func LoadConfig() (*DBConfig, error) {
 		}
 	}
 
-	if dbConfig.DB.Host == "" || dbConfig.DB.User == "" || dbConfig.DB.Password == "" {
-		return nil, fmt.Errorf("MITM_DB_HOST, MITM_DB_USER, and MITM_DB_PASSWORD are required")
+	return &dbConfig
+}
+
+func applyInternalDefaults(exeDir string) *DBConfig {
+	return &DBConfig{
+		DB: DBConnectionConfig{
+			Host:           "localhost",
+			Port:           5432,
+			User:           "mitm_user",
+			Password:       "",
+			Database:       "mitm",
+			DBConnectDelay: 5,
+			MaxConns:       50,
+			SSLMode:        true,
+		},
+		LogLevel:  "INFO",
+		UploadDir: filepath.Join(exeDir, "mitm_uploads"),
+		HTTPPort:  8443,
+		UseHTTPS:  true,
+		SSLCert:   filepath.Join(exeDir, "certs", "server.crt"),
+		SSLKey:    filepath.Join(exeDir, "certs", "server.key"),
+	}
+}
+
+// applyCertificateFallback verifies if SSLCert and SSLKey files exist.
+// If not, searches fallback directories <binary_dir>/. and <binary_dir>/certs/.
+func applyCertificateFallback(cfg *DBConfig, exeDir string) *DBConfig {
+	if cfg == nil {
+		return cfg
 	}
 
-	return &dbConfig, nil
+	checkFallback := func(currentPath string, filename string) string {
+		if _, err := os.Stat(currentPath); err == nil {
+			return currentPath
+		}
+		fallbackOpts := []string{
+			filepath.Join(exeDir, filename),
+			filepath.Join(exeDir, "certs", filename),
+		}
+		for _, opt := range fallbackOpts {
+			if _, err := os.Stat(opt); err == nil {
+				return opt
+			}
+		}
+		return currentPath
+	}
+
+	certName := filepath.Base(cfg.SSLCert)
+	if certName == "." || certName == "/" || certName == "" {
+		certName = "server.crt"
+	}
+	cfg.SSLCert = checkFallback(cfg.SSLCert, certName)
+
+	keyName := filepath.Base(cfg.SSLKey)
+	if keyName == "." || keyName == "/" || keyName == "" {
+		keyName = "server.key"
+	}
+	cfg.SSLKey = checkFallback(cfg.SSLKey, keyName)
+
+	return cfg
 }
 
 // GetDSN returns the PostgreSQL connection string

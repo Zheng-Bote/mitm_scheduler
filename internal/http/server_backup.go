@@ -13,7 +13,7 @@ func (s *Server) handleBackup(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	
+
 	roles, err := s.Repo.GetUserRolesByUsername(r.Context(), username, s.KEK)
 	hasRole := false
 	for _, role := range roles {

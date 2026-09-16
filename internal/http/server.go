@@ -127,8 +127,8 @@ type Server struct {
 	AppVersion     string
 	httpSrv        *http.Server
 
-	authLimiterMu  sync.Mutex
-	authLimiter    map[string]authAttempt
+	authLimiterMu sync.Mutex
+	authLimiter   map[string]authAttempt
 }
 
 type authAttempt struct {
@@ -273,7 +273,7 @@ func (s *Server) authenticate(r *http.Request) (string, bool) {
 			return user, true
 		}
 	}
-	
+
 	// Fallback to DB check
 	var hashStr string
 	err := s.Repo.Pool.QueryRow(r.Context(), "SELECT password_hash FROM admin_users WHERE username = $1 AND is_active = true", user).Scan(&hashStr)

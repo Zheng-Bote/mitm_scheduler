@@ -113,7 +113,12 @@ psql -h <host> -U <user> -d <db> -f migrations/006_rbac.sql
 
 ### 4. Configuration
 
-The Scheduler is configured entirely via environment variables.
+The Scheduler configuration is resolved in the following precedence order:
+1. **Commandline Parameter**: A path to an encrypted JSON config file (e.g., `./scheduler /data/config.enc`). This takes absolute precedence and ignores ENVs.
+2. **Environment Variables**: Individual `MITM_*` variables (see table below).
+3. **Default Config Files**: Automatically looks for `<binary_dir>/config.enc` and then `<binary_dir>/cfg/config.enc`.
+
+*Note: Encrypted configuration files are created using the `encrypt-config` tool and require the `SCHEDULER_PASSWORD` environment variable to decrypt at runtime.*
 
 ### Environment Variables
 
@@ -124,13 +129,13 @@ The Scheduler is configured entirely via environment variables.
 | `MITM_DB_USER` | PostgreSQL Username (Required) | - |
 | `MITM_DB_PASSWORD` | PostgreSQL Password (Required) | - |
 | `MITM_DB_NAME` | PostgreSQL Database Name | - |
-| `MITM_DB_SSLMODE` | Enable SSL (`require` or `disable`) | `disable` |
+| `MITM_DB_SSLMODE` | Enable SSL (`require` or `disable`) | `require` |
 | `MITM_DB_CONNECT_DELAY` | Initial delay in seconds before DB connect | `5` |
-| `MITM_DB_MAX_CONNS` | Max DB connections in pool | `20` |
+| `MITM_DB_MAX_CONNS` | Max DB connections in pool | `50` |
 | `MITM_LOG_LEVEL` | Log Level (`DEBUG`, `INFO`, `WARN`, `ERROR`) | `INFO` |
 | `MITM_UPLOAD_DIR` | Path to file uploads | `<binary_dir>/mitm_uploads` |
-| `MITM_HTTP_PORT` | REST API Port | `8080` |
-| `MITM_USE_HTTPS` | Enable HTTPS server | `false` |
+| `MITM_HTTP_PORT` | REST API Port | `8443` |
+| `MITM_USE_HTTPS` | Enable HTTPS server | `true` |
 | `MITM_SSL_CERT` | Path to SSL certificate | `<binary_dir>/certs/server.crt` |
 | `MITM_SSL_KEY` | Path to SSL private key | `<binary_dir>/certs/server.key` |
 | `MITM_ADMINS` | Comma-separated list of admin usernames | - |

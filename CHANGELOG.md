@@ -5,6 +5,18 @@ All notable changes to the MitM Scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.34.0] - 2026-09-16
+
+### Added
+
+- **Configuration**: Restored support for reading configuration from encrypted `config.enc` files (AES-256 + Argon2id via `SCHEDULER_PASSWORD`) to allow hybrid config models (Issue #15).
+- **Configuration**: Introduced strict precedence rules (Parameter > ENVs > Default `config.enc`) to merge settings from encrypted files and environment variables.
+- **Tools**: Re-introduced the `encrypt-config` CLI tool to generate `config.enc` files, now with `-d` (decrypt) mode and double password validation.
+
+### Changed
+
+- **Configuration**: Updated default values: `MITM_DB_SSLMODE=require`, `MITM_DB_MAX_CONNS=50`, `MITM_HTTP_PORT=8443`, and `MITM_USE_HTTPS=true`.
+
 ## [v0.33.0] - 2026-09-14
 
 ### Changed

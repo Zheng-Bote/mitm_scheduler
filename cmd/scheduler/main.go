@@ -35,7 +35,7 @@ import (
 	"go-scheduler/internal/scheduler"
 )
 
-const defaultVersion = "0.30.0"
+const defaultVersion = "0.34.0"
 
 var (
 	appName        = "MitM Scheduler"
@@ -147,12 +147,18 @@ func main() {
 		log.Fatal("MASTER_KEY environment variable is required")
 	}
 
-	// Load Config from Environment Variables
-	dbCfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config from environment: %v", err)
+	var configPath string
+	if len(os.Args) > 1 {
+		configPath = os.Args[1]
 	}
 
+	password := os.Getenv("SCHEDULER_PASSWORD")
+
+	// 2. Load Config
+	dbCfg, err := config.LoadConfig(configPath, password)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
 	// 3. Prepare early startup configuration
 	var schedCfg *db.SchedulerConfig = &db.SchedulerConfig{
