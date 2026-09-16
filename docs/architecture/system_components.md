@@ -11,9 +11,8 @@ The project is structured following clean Go conventions, separating the executa
 ```
 go_scheduler/
 ├── cmd/                          # Command entry points
-│   ├── scheduler/               # Core scheduler daemon
-│   ├── encrypt-config/          # CLI utility to encrypt configurations
-│   ├── scheduler-admin/         # Fyne-based GUI admin client
+│   ├── scheduler/               # Main scheduler application
+│   ├── create-admin/            # CLI utility to bootstrap admin usersclient
 │   └── job1/, job2/             # Sample jobs for testing IPC
 ├── internal/                     # Private application packages
 │   ├── config/                  # Configuration structure & loader
@@ -41,11 +40,13 @@ go_scheduler/
     6.  Starts the REST API Server in the background.
     7.  Loads enabled jobs from the DB, schedules them in the Cron Engine, and enters a blocking state waiting for termination signals (`SIGINT`, `SIGTERM`).
 
-### 2.2 Security & Configuration (`internal/config`, `internal/crypto`, `cmd/encrypt-config`)
-To prevent plaintext credentials from being stored on disk, configurations are encrypted.
-*   **Crypto Layer**: [internal/crypto/crypto.go](file:///home/zb_bamboo/DEV/__NEW__/Go/go_scheduler/internal/crypto/crypto.go) implements key derivation via **Argon2id** (3 passes, 64 MB memory, 1 thread, 32-byte key) and encryption/decryption using **AES-256-GCM**.
-*   **Config Loader**: [internal/config/config.go](file:///home/zb_bamboo/DEV/__NEW__/Go/go_scheduler/internal/config/config.go) reads the encrypted payload, decrypts it using the provided password, and unmarshals it into the [DBConfig](file:///home/zb_bamboo/DEV/__NEW__/Go/go_scheduler/internal/config/config.go#L39) struct.
-*   **CLI Encryption Tool**: [cmd/encrypt-config/main.go](file:///home/zb_bamboo/DEV/__NEW__/Go/go_scheduler/cmd/encrypt-config/main.go) is a standalone CLI program to turn a raw JSON configuration file into an encrypted `.enc` binary file.
+### 2.2 Security & Configuration (`internal/config`, `internal/crypto`)
+
+*   **Envelope Encryption**: All sensitive Personal Identifiable Information (PII) is encrypted at rest using AES-GCM (256-bit).
+*   **Key Hierarchy**: 
+    *   **Master Key (KEK)**: The Key Encryption Key. It is *never* stored in the database or on disk. It is injected into the Scheduler via the `MASTER_KEY` environment variable.
+    *   **Data Encryption Keys (DEKs)**: Unique DEKs are generated for each data topic, wrapped (encrypted) with the KEK, and stored in the PostgreSQL database. When agents run, they receive the wrapped DEK, which they unwrap in memory using the KEK (provided via IPC).
+*   **Configuration**: Handled strictly via standard Environment Variables (`MITM_DB_HOST`, `MITM_DB_PASSWORD`, etc.) enabling secure AWS deployment via Secrets Manager.
 
 ### 2.3 Database Access Layer (`internal/db`)
 *   **Location**: [internal/db/db.go](file:///home/zb_bamboo/DEV/__NEW__/Go/go_scheduler/internal/db/db.go)

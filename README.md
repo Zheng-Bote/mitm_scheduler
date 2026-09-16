@@ -112,51 +112,40 @@ psql -h <host> -U <user> -d <db> -f migrations/006_rbac.sql
 
 ### 4. Configuration
 
-Create a `config.json` (see `example_config.json` for a template):
+The Scheduler is configured entirely via environment variables.
 
-```json
-{
-  "db": {
-    "host": "your-db-host",
-    "port": 5432,
-    "user": "your-user",
-    "password": "your-password",
-    "database": "your-dbname",
-    "db_connect_delay": 30,
-    "sslmode": false,
-    "max_conns": 50
-  },
-  "http_port": 8080,
-  "use_https": false,
-  "ssl_cert": "server.crt",
-  "ssl_key": "server.key",
-  "log_level": "DEBUG",
-  "upload_dir": "/tmp/mitm_uploads",
-  "admins": [
-    {
-      "username": "admin1",
-      "token": "your_secure_token"
-    }
-  ]
-}
-```
+### Environment Variables
 
-Encrypt it:
-
-```bash
-./encrypt-config config.json config.json.enc
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MITM_DB_HOST` | PostgreSQL Hostname (Required) | - |
+| `MITM_DB_PORT` | PostgreSQL Port | `5432` |
+| `MITM_DB_USER` | PostgreSQL Username (Required) | - |
+| `MITM_DB_PASSWORD` | PostgreSQL Password (Required) | - |
+| `MITM_DB_NAME` | PostgreSQL Database Name | - |
+| `MITM_DB_SSLMODE` | Enable SSL (`require` or `disable`) | `disable` |
+| `MITM_DB_CONNECT_DELAY` | Initial delay in seconds before DB connect | `5` |
+| `MITM_DB_MAX_CONNS` | Max DB connections in pool | `20` |
+| `MITM_LOG_LEVEL` | Log Level (`DEBUG`, `INFO`, `WARN`, `ERROR`) | `INFO` |
+| `MITM_UPLOAD_DIR` | Path to file uploads | `<binary_dir>/mitm_uploads` |
+| `MITM_HTTP_PORT` | REST API Port | `8080` |
+| `MITM_USE_HTTPS` | Enable HTTPS server | `false` |
+| `MITM_SSL_CERT` | Path to SSL certificate | `<binary_dir>/certs/server.crt` |
+| `MITM_SSL_KEY` | Path to SSL private key | `<binary_dir>/certs/server.key` |
+| `MITM_ADMINS` | Comma-separated list of admin usernames | - |
 
 ## Running the Scheduler
 
-The Scheduler requires two critical environment variables to start:
-1. `SCHEDULER_PASSWORD`: The password used to decrypt the `config.json.enc` file.
-2. `MASTER_KEY`: The base64-encoded Key Encryption Key (KEK) used for Envelope Encryption.
+The Scheduler requires the `MASTER_KEY` environment variable to start. It is used as the Key Encryption Key (KEK) for Envelope Encryption.
 
 ```bash
-export SCHEDULER_PASSWORD="your_secure_password"
+export MITM_DB_HOST="localhost"
+export MITM_DB_USER="mitm_user"
+export MITM_DB_PASSWORD="your_db_password"
+export MITM_DB_NAME="mitm"
 export MASTER_KEY="your_base64_master_key"
-./scheduler config.json.enc
+
+./scheduler
 ```
 
 ### Generating a MASTER_KEY

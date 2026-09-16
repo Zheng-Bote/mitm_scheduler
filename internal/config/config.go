@@ -6,27 +6,23 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * @file config.go
- * @brief Configuration data types and encrypted config loading
- * @version 1.0.0
- * @date 2026-06-02
+ * @brief Configuration data types and ENV config loading
+ * @version 2.0.0
+ * @date 2026-09-14
  *
  * @author ZHENG Robert (robert@hase-zheng.net)
  * @copyright Copyright (c) 2026 ZHENG Robert
  * @LICENSE Apache-2.0
  */
 
-// Package config provides data types and functions for loading and managing
-// the scheduler's encrypted configuration file. It handles decryption via the
-// crypto package and exposes PostgreSQL connection parameters and admin user
-// definitions.
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-
-	"go-scheduler/internal/crypto"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 // AdminUser defines a simple administrative user for API access
@@ -57,21 +53,79 @@ type DBConfig struct {
 	SSLKey    string             `json:"ssl_key,omitempty"`
 }
 
-// LoadEncryptedConfig reads an encrypted JSON file and decrypts it into DBConfig
-func LoadEncryptedConfig(filePath string, password string) (*DBConfig, error) {
-	encryptedData, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read encrypted config file: %w", err)
+func getEnvStr(key, defaultVal string) string {
+	if val, exists := os.LookupEnv(key); exists {
+		return val
 	}
+	return defaultVal
+}
 
-	decryptedData, err := crypto.Decrypt(encryptedData, []byte(password))
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt config: %w", err)
+func getEnvInt(key string, defaultVal int) int {
+	if val, exists := os.LookupEnv(key); exists {
+		if parsed, err := strconv.Atoi(val); err == nil {
+			return parsed
+		}
+	}
+	return defaultVal
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	if val, exists := os.LookupEnv(key); exists {
+		lower := strings.ToLower(val)
+		return lower == "true" || lower == "1" || lower == "yes"
+	}
+	return defaultVal
+}
+
+// LoadConfig reads configuration from standard environment variables
+func LoadConfig() (*DBConfig, error) {
+	exePath, err := os.Executable()
+	var exeDir string
+	if err == nil {
+		exeDir = filepath.Dir(exePath)
+	} else {
+		exeDir = "."
 	}
 
 	var dbConfig DBConfig
-	if err := json.Unmarshal(decryptedData, &dbConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse decrypted config JSON: %w", err)
+	
+	dbConfig.DB.Host = getEnvStr("MITM_DB_HOST", "")
+	dbConfig.DB.Port = getEnvInt("MITM_DB_PORT", 5432)
+	dbConfig.DB.User = getEnvStr("MITM_DB_USER", "")
+	dbConfig.DB.Password = getEnvStr("MITM_DB_PASSWORD", "")
+	dbConfig.DB.Database = getEnvStr("MITM_DB_NAME", "")
+	dbConfig.DB.DBConnectDelay = getEnvInt("MITM_DB_CONNECT_DELAY", 5)
+	dbConfig.DB.MaxConns = getEnvInt("MITM_DB_MAX_CONNS", 20)
+	
+	sslModeStr := strings.ToLower(getEnvStr("MITM_DB_SSLMODE", ""))
+	if sslModeStr == "require" || sslModeStr == "true" || sslModeStr == "1" || sslModeStr == "yes" {
+		dbConfig.DB.SSLMode = true
+	} else {
+		dbConfig.DB.SSLMode = getEnvBool("MITM_DB_SSL", false)
+	}
+	
+	dbConfig.LogLevel = getEnvStr("MITM_LOG_LEVEL", "INFO")
+	dbConfig.UploadDir = getEnvStr("MITM_UPLOAD_DIR", filepath.Join(exeDir, "mitm_uploads"))
+	dbConfig.HTTPPort = getEnvInt("MITM_HTTP_PORT", 8080)
+	dbConfig.UseHTTPS = getEnvBool("MITM_USE_HTTPS", false)
+	dbConfig.SSLCert = getEnvStr("MITM_SSL_CERT", getEnvStr("MITM_SSL_CRT", filepath.Join(exeDir, "certs", "server.crt")))
+	dbConfig.SSLKey = getEnvStr("MITM_SSL_KEY", filepath.Join(exeDir, "certs", "server.key"))
+
+	adminsStr := getEnvStr("MITM_ADMINS", "")
+	if adminsStr != "" {
+		for _, admin := range strings.Split(adminsStr, ",") {
+			admin = strings.TrimSpace(admin)
+			if admin != "" {
+				dbConfig.Admins = append(dbConfig.Admins, AdminUser{
+					Username: admin,
+					Token:    "cority", // "Blender" token
+				})
+			}
+		}
+	}
+
+	if dbConfig.DB.Host == "" || dbConfig.DB.User == "" || dbConfig.DB.Password == "" {
+		return nil, fmt.Errorf("MITM_DB_HOST, MITM_DB_USER, and MITM_DB_PASSWORD are required")
 	}
 
 	return &dbConfig, nil

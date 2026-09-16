@@ -3,7 +3,9 @@ FROM debian:bookworm-slim
 
 # docker build -t mitm-aggregator:latest -f scheduler/mitm_scheduler/Dockerfile .
 # docker run -d --name mitm-app \
-#       -e SCHEDULER_PASSWORD="DeinPasswort123!" \
+#       -e MITM_DB_HOST="postgres-db" \
+#       -e MITM_DB_USER="mitm_user" \
+#       -e MITM_DB_PASSWORD="secure_pass" \
 #       -e MASTER_KEY="<DeinBase64MasterKey>" \
 #       -p 8080:8080 \
 #       mitm-aggregator:latest
@@ -32,6 +34,5 @@ EXPOSE 8080
 # It will spawn the other binaries in the background via os.Exec when jobs trigger.
 ENTRYPOINT ["mitm-server"]
 
-# Default command argument (points to the pre-encrypted config file copied into /app/bin/)
-# Example: docker run -d -e SCHEDULER_PASSWORD=... my-mitm-image
-CMD ["/app/bin/config.enc"]
+# Empty CMD since config is now handled via ENVs
+CMD []
