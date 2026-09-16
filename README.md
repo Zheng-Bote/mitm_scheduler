@@ -25,6 +25,7 @@
   - [2. Build](#2-build)
   - [3. Database Setup](#3-database-setup)
   - [4. Configuration](#4-configuration)
+  - [Environment Variables](#environment-variables)
 - [Running the Scheduler](#running-the-scheduler)
   - [Generating a MASTER_KEY](#generating-a-master_key)
 - [Administrative Tools](#administrative-tools)
